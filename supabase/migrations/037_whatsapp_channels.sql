@@ -217,3 +217,14 @@ CREATE POLICY uazapi_channels_delete ON uazapi_channels FOR DELETE USING (
 DROP TRIGGER IF EXISTS set_updated_at ON uazapi_channels;
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON uazapi_channels
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ---- routing columns --------------------------------------------
+-- NULL means "use the account's is_default channel" — resolved at
+-- send/receive time (Plan 2/3), not backfilled here. ON DELETE SET
+-- NULL (not CASCADE) so removing a channel never deletes
+-- conversation/message history.
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS channel_id UUID REFERENCES channels(id) ON DELETE SET NULL;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS channel_id UUID REFERENCES channels(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_conversations_channel ON conversations(channel_id);
+CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages(channel_id);

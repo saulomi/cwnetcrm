@@ -171,3 +171,49 @@ SELECT
   status, connected_at, created_at, updated_at, account_id,
   registered_at, subscribed_apps_at, last_registration_error
 FROM meta_channels;
+
+-- ---- uazapi_channels ------------------------------------------
+CREATE TABLE IF NOT EXISTS uazapi_channels (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  channel_id UUID NOT NULL UNIQUE REFERENCES channels(id) ON DELETE CASCADE,
+  instance_id TEXT NOT NULL,
+  -- Encrypted at rest with the same ENCRYPTION_KEY / encryption.ts
+  -- used for meta_channels.access_token (wired up in Plan 4).
+  instance_token TEXT NOT NULL,
+  base_url TEXT NOT NULL,
+  connected_phone TEXT,
+  profile_name TEXT,
+  qr_code TEXT,
+  webhook_secret TEXT,
+  last_error TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_uazapi_channels_instance ON uazapi_channels(instance_id);
+
+ALTER TABLE uazapi_channels ENABLE ROW LEVEL SECURITY;
+
+-- uazapi_channels has no account_id of its own — join through
+-- channels for tenancy, same pattern as any child-of-a-tenant-row
+-- table elsewhere in this schema (e.g. broadcast_recipients).
+DROP POLICY IF EXISTS uazapi_channels_select ON uazapi_channels;
+DROP POLICY IF EXISTS uazapi_channels_insert ON uazapi_channels;
+DROP POLICY IF EXISTS uazapi_channels_update ON uazapi_channels;
+DROP POLICY IF EXISTS uazapi_channels_delete ON uazapi_channels;
+CREATE POLICY uazapi_channels_select ON uazapi_channels FOR SELECT USING (
+  EXISTS (SELECT 1 FROM channels c WHERE c.id = uazapi_channels.channel_id AND is_account_member(c.account_id))
+);
+CREATE POLICY uazapi_channels_insert ON uazapi_channels FOR INSERT WITH CHECK (
+  EXISTS (SELECT 1 FROM channels c WHERE c.id = uazapi_channels.channel_id AND is_account_member(c.account_id, 'admin'))
+);
+CREATE POLICY uazapi_channels_update ON uazapi_channels FOR UPDATE USING (
+  EXISTS (SELECT 1 FROM channels c WHERE c.id = uazapi_channels.channel_id AND is_account_member(c.account_id, 'admin'))
+);
+CREATE POLICY uazapi_channels_delete ON uazapi_channels FOR DELETE USING (
+  EXISTS (SELECT 1 FROM channels c WHERE c.id = uazapi_channels.channel_id AND is_account_member(c.account_id, 'admin'))
+);
+
+DROP TRIGGER IF EXISTS set_updated_at ON uazapi_channels;
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON uazapi_channels
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

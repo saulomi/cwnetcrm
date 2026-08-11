@@ -172,6 +172,14 @@ SELECT
   registered_at, subscribed_apps_at, last_registration_error
 FROM meta_channels;
 
+-- Views default to security_invoker = false, which makes Postgres
+-- evaluate RLS on the underlying meta_channels table as the view's
+-- OWNER rather than the querying role — bypassing the account-scoped
+-- RLS policies entirely. Without this, any authenticated user could
+-- read or modify any other account's WhatsApp credentials through
+-- this compatibility view. Idempotent — safe to re-run.
+ALTER VIEW public.whatsapp_config SET (security_invoker = true);
+
 -- ---- uazapi_channels ------------------------------------------
 CREATE TABLE IF NOT EXISTS uazapi_channels (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

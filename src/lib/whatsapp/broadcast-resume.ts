@@ -19,7 +19,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { BroadcastError, type BroadcastPlan } from '@/lib/whatsapp/broadcast-core';
-import { decrypt } from '@/lib/whatsapp/encryption';
+import {
+  resolveChannelForSend,
+  resolveProvider,
+  ChannelResolutionError,
+} from '@/lib/whatsapp/channel-resolution';
 import { resolveTemplateRow } from '@/lib/whatsapp/template-body';
 import { sanitizePhoneForMeta, isValidE164 } from '@/lib/whatsapp/phone-utils';
 
@@ -205,17 +209,16 @@ export async function planBroadcastResume(
     );
   }
 
-  const { data: config, error: configError } = await db
-    .from('whatsapp_config')
-    .select('*')
-    .eq('account_id', accountId)
-    .single();
-  if (configError || !config) {
-    throw new BroadcastError(
-      'whatsapp_not_configured',
-      'WhatsApp not configured. Please set up your WhatsApp integration first.',
-      400
-    );
+  let resolvedChannel;
+  let provider;
+  try {
+    resolvedChannel = await resolveChannelForSend(db, accountId, null);
+    provider = await resolveProvider(db, resolvedChannel);
+  } catch (err) {
+    if (err instanceof ChannelResolutionError) {
+      throw new BroadcastError('whatsapp_not_configured', err.message, 400);
+    }
+    throw err;
   }
 
   const resolvedTemplate = await resolveTemplateRow(
@@ -236,8 +239,8 @@ export async function planBroadcastResume(
     broadcastId,
     templateName: broadcast.template_name,
     templateLanguage: resolvedTemplate.language,
-    phoneNumberId: config.phone_number_id,
-    accessToken: decrypt(config.access_token),
+    channelId: resolvedChannel.channelId,
+    provider,
     templateRow: resolvedTemplate.row,
     planned: slice.map((row) => ({
       recipientRowId: row.id,

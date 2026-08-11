@@ -11,6 +11,8 @@ import {
 
 vi.mock('@/lib/whatsapp/encryption', () => ({
   decrypt: (v: string) => `decrypted:${v}`,
+  encrypt: (v: string) => v,
+  isLegacyFormat: () => false,
 }));
 
 // ============================================================
@@ -115,7 +117,8 @@ describe('releaseBroadcastDelivery', () => {
 interface PlanFixture {
   broadcast?: Record<string, unknown> | null;
   recipients?: Record<string, unknown>[];
-  config?: Record<string, unknown> | null;
+  channel?: Record<string, unknown> | null;
+  metaChannel?: Record<string, unknown> | null;
   templates?: Record<string, unknown>[];
 }
 
@@ -141,14 +144,21 @@ function planDb(fx: PlanFixture, writes: PlanWrites = {}): SupabaseClient {
           writes.failedUpdate = row;
           return b;
         },
-        maybeSingle: async () => ({
-          data: fx.broadcast === undefined ? null : fx.broadcast,
-          error: null,
-        }),
-        single: async () => ({
-          data: fx.config === undefined ? null : fx.config,
-          error: null,
-        }),
+        maybeSingle: async () => {
+          if (table === 'broadcasts') {
+            return { data: fx.broadcast === undefined ? null : fx.broadcast, error: null };
+          }
+          if (table === 'channels') {
+            return { data: fx.channel === undefined ? null : fx.channel, error: null };
+          }
+          return { data: null, error: null };
+        },
+        single: async () => {
+          if (table === 'meta_channels') {
+            return { data: fx.metaChannel === undefined ? null : fx.metaChannel, error: null };
+          }
+          return { data: null, error: null };
+        },
         then: (resolve: (r: { data: unknown[]; error: null }) => unknown) => {
           if (table === 'broadcast_recipients') {
             return resolve({ data: fx.recipients ?? [], error: null });
@@ -170,7 +180,8 @@ const BROADCAST = {
   template_language: 'en_US',
 };
 
-const CONFIG = { phone_number_id: 'pn-1', access_token: 'tok' };
+const CHANNEL = { id: 'ch-1', provider: 'meta' as const };
+const META_CHANNEL = { id: 'mc-1', phone_number_id: 'pn-1', access_token: 'tok' };
 
 function recipient(
   id: string,
@@ -191,7 +202,8 @@ describe('planBroadcastResume', () => {
       planDb(
         {
           broadcast: BROADCAST,
-          config: CONFIG,
+          channel: CHANNEL,
+          metaChannel: META_CHANNEL,
           recipients: [
             recipient('r1', '+15551234567', ['A123', 'Friday']),
             recipient('r2', '+15559876543', ['B456', 'Monday']),
@@ -220,7 +232,7 @@ describe('planBroadcastResume', () => {
         params: ['B456', 'Monday'],
       },
     ]);
-    expect(plan.accessToken).toBe('decrypted:tok');
+    expect(plan.channelId).toBe('ch-1');
     expect(remaining).toBe(0);
     expect(unsendable).toBe(0);
   });
@@ -231,7 +243,8 @@ describe('planBroadcastResume', () => {
       planDb(
         {
           broadcast: BROADCAST,
-          config: CONFIG,
+          channel: CHANNEL,
+          metaChannel: META_CHANNEL,
           recipients: [recipient('r1', '+15551234567')],
         },
         failedWrites,
@@ -247,7 +260,8 @@ describe('planBroadcastResume', () => {
       planDb(
         {
           broadcast: BROADCAST,
-          config: CONFIG,
+          channel: CHANNEL,
+          metaChannel: META_CHANNEL,
           recipients: [recipient('r1', '+15551234567')],
         },
         allWrites,
@@ -263,7 +277,8 @@ describe('planBroadcastResume', () => {
     const { plan } = await planBroadcastResume(
       planDb({
         broadcast: BROADCAST,
-        config: CONFIG,
+        channel: CHANNEL,
+        metaChannel: META_CHANNEL,
         recipients: [
           // Rows created before migration 038 carry NULL.
           recipient('r1', '+15551234567', null),
@@ -283,7 +298,8 @@ describe('planBroadcastResume', () => {
       planDb(
         {
           broadcast: BROADCAST,
-          config: CONFIG,
+          channel: CHANNEL,
+          metaChannel: META_CHANNEL,
           recipients: [
             recipient('r1', '+15551234567'),
             recipient('r2', null),
@@ -310,7 +326,7 @@ describe('planBroadcastResume', () => {
       recipient(`r${i}`, '+1555000' + String(i).padStart(4, '0')),
     );
     const { plan, remaining } = await planBroadcastResume(
-      planDb({ broadcast: BROADCAST, config: CONFIG, recipients: many }),
+      planDb({ broadcast: BROADCAST, channel: CHANNEL, metaChannel: META_CHANNEL, recipients: many }),
       'acct-1',
       'bc-1',
       'pending',
@@ -334,7 +350,7 @@ describe('planBroadcastResume', () => {
   it('refuses when there is nothing outstanding', async () => {
     await expect(
       planBroadcastResume(
-        planDb({ broadcast: BROADCAST, config: CONFIG, recipients: [] }),
+        planDb({ broadcast: BROADCAST, channel: CHANNEL, metaChannel: META_CHANNEL, recipients: [] }),
         'acct-1',
         'bc-1',
         'failed',
@@ -346,7 +362,8 @@ describe('planBroadcastResume', () => {
     const { plan } = await planBroadcastResume(
       planDb({
         broadcast: { ...BROADCAST, template_language: 'en_US' },
-        config: CONFIG,
+        channel: CHANNEL,
+        metaChannel: META_CHANNEL,
         recipients: [recipient('r1', '+15551234567')],
         templates: [
           {

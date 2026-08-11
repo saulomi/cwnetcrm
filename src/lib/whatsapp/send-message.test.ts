@@ -212,8 +212,10 @@ function sendPathDb(
     id: 'cv-1',
     contact: { id: 'ct-1', phone: '+15551234567' },
   };
-  const config = {
-    id: 'cfg-1',
+  const channel = { id: 'ch-1', provider: 'meta' as const };
+  const metaChannel = {
+    id: 'mc-1',
+    channel_id: 'ch-1',
     phone_number_id: 'pn-1',
     access_token: 'token',
   };
@@ -231,12 +233,15 @@ function sendPathDb(
           if (table === 'conversations') captured.conversation = row;
           return builder;
         },
-        maybeSingle: async () => ({ data: null, error: null }),
+        maybeSingle: async () => {
+          if (table === 'channels') return { data: channel, error: null };
+          return { data: null, error: null };
+        },
         single: async () => {
           if (table === 'conversations') {
             return { data: conversation, error: null };
           }
-          if (table === 'whatsapp_config') return { data: config, error: null };
+          if (table === 'meta_channels') return { data: metaChannel, error: null };
           if (table === 'messages') {
             return { data: { id: 'msg-1' }, error: null };
           }
@@ -344,5 +349,17 @@ describe('sendMessageToConversation — template persistence (#483)', () => {
     // name rather than inventing a body.
     expect(captured.message?.content_text).toBeNull();
     expect(captured.conversation?.last_message_text).toBe('[template]');
+  });
+});
+
+describe('sendMessageToConversation — channel resolution', () => {
+  it('stamps the resolved channel_id on the persisted message', async () => {
+    const captured: CapturedWrites = {};
+    await sendMessageToConversation(sendPathDb([], captured), 'acct-1', {
+      conversationId: 'cv-1',
+      messageType: 'text',
+      contentText: 'hello',
+    });
+    expect(captured.message?.channel_id).toBe('ch-1');
   });
 });

@@ -1,14 +1,14 @@
 import {
-  sendInteractiveButtons,
-  sendInteractiveList,
-  sendMediaMessage,
-  sendTextMessage,
   type InteractiveButton,
   type InteractiveListSection,
   type MediaKind,
 } from '@/lib/whatsapp/meta-api'
 import type { InteractiveMessagePayload } from '@/lib/whatsapp/interactive'
-import { decrypt } from '@/lib/whatsapp/encryption'
+import {
+  resolveChannelForSend,
+  resolveProvider,
+  ChannelResolutionError,
+} from '@/lib/whatsapp/channel-resolution'
 import {
   sanitizePhoneForMeta,
   isValidE164,
@@ -82,24 +82,31 @@ export async function engineSendText(
     throw new Error(`contact phone invalid: ${contact.phone}`)
   }
 
-  const { data: config, error: configErr } = await db
-    .from('whatsapp_config')
-    .select('*')
+  const { data: conversation } = await db
+    .from('conversations')
+    .select('channel_id')
+    .eq('id', args.conversationId)
     .eq('account_id', args.accountId)
-    .single()
-  if (configErr || !config) {
-    throw new Error('WhatsApp not configured for this account')
+    .maybeSingle()
+
+  let resolvedChannel
+  let provider
+  try {
+    resolvedChannel = await resolveChannelForSend(
+      db,
+      args.accountId,
+      conversation?.channel_id
+    )
+    provider = await resolveProvider(db, resolvedChannel)
+  } catch (err) {
+    if (err instanceof ChannelResolutionError) {
+      throw new Error('WhatsApp not configured for this account')
+    }
+    throw err
   }
 
-  const accessToken = decrypt(config.access_token)
-
   const attempt = async (phone: string): Promise<string> => {
-    const r = await sendTextMessage({
-      phoneNumberId: config.phone_number_id,
-      accessToken,
-      to: phone,
-      text: args.text,
-    })
+    const r = await provider.sendText({ to: phone, text: args.text })
     return r.messageId
   }
 
@@ -133,6 +140,7 @@ export async function engineSendText(
     message_id: waMessageId,
     status: 'sent',
     ai_generated: args.aiGenerated ?? false,
+    channel_id: resolvedChannel.channelId,
   })
   if (msgErr) {
     throw new Error(`sent to Meta but DB insert failed: ${msgErr.message}`)
@@ -192,21 +200,31 @@ export async function engineSendMedia(
     throw new Error(`contact phone invalid: ${contact.phone}`)
   }
 
-  const { data: config, error: configErr } = await db
-    .from('whatsapp_config')
-    .select('*')
+  const { data: conversation } = await db
+    .from('conversations')
+    .select('channel_id')
+    .eq('id', args.conversationId)
     .eq('account_id', args.accountId)
-    .single()
-  if (configErr || !config) {
-    throw new Error('WhatsApp not configured for this account')
+    .maybeSingle()
+
+  let resolvedChannel
+  let provider
+  try {
+    resolvedChannel = await resolveChannelForSend(
+      db,
+      args.accountId,
+      conversation?.channel_id
+    )
+    provider = await resolveProvider(db, resolvedChannel)
+  } catch (err) {
+    if (err instanceof ChannelResolutionError) {
+      throw new Error('WhatsApp not configured for this account')
+    }
+    throw err
   }
 
-  const accessToken = decrypt(config.access_token)
-
   const attempt = async (phone: string): Promise<string> => {
-    const r = await sendMediaMessage({
-      phoneNumberId: config.phone_number_id,
-      accessToken,
+    const r = await provider.sendMedia({
       to: phone,
       kind: args.kind,
       link: args.link,
@@ -250,6 +268,7 @@ export async function engineSendMedia(
     content_text: args.caption ?? null,
     message_id: waMessageId,
     status: 'sent',
+    channel_id: resolvedChannel.channelId,
   })
   if (msgErr) {
     throw new Error(`sent to Meta but DB insert failed: ${msgErr.message}`)
@@ -344,22 +363,32 @@ async function sendInteractiveViaMeta(
     throw new Error(`contact phone invalid: ${contact.phone}`)
   }
 
-  const { data: config, error: configErr } = await db
-    .from('whatsapp_config')
-    .select('*')
+  const { data: conversation } = await db
+    .from('conversations')
+    .select('channel_id')
+    .eq('id', input.conversationId)
     .eq('account_id', input.accountId)
-    .single()
-  if (configErr || !config) {
-    throw new Error('WhatsApp not configured for this account')
-  }
+    .maybeSingle()
 
-  const accessToken = decrypt(config.access_token)
+  let resolvedChannel
+  let provider
+  try {
+    resolvedChannel = await resolveChannelForSend(
+      db,
+      input.accountId,
+      conversation?.channel_id
+    )
+    provider = await resolveProvider(db, resolvedChannel)
+  } catch (err) {
+    if (err instanceof ChannelResolutionError) {
+      throw new Error('WhatsApp not configured for this account')
+    }
+    throw err
+  }
 
   const attempt = async (phone: string): Promise<string> => {
     if (input.kind === 'buttons') {
-      const r = await sendInteractiveButtons({
-        phoneNumberId: config.phone_number_id,
-        accessToken,
+      const r = await provider.sendInteractiveButtons({
         to: phone,
         bodyText: input.bodyText,
         buttons: input.buttons,
@@ -368,9 +397,7 @@ async function sendInteractiveViaMeta(
       })
       return r.messageId
     }
-    const r = await sendInteractiveList({
-      phoneNumberId: config.phone_number_id,
-      accessToken,
+    const r = await provider.sendInteractiveList({
       to: phone,
       bodyText: input.bodyText,
       buttonLabel: input.buttonLabel,
@@ -443,6 +470,7 @@ async function sendInteractiveViaMeta(
     interactive_payload: interactivePayload,
     message_id: waMessageId,
     status: 'sent',
+    channel_id: resolvedChannel.channelId,
   })
   if (msgErr) {
     throw new Error(`sent to Meta but DB insert failed: ${msgErr.message}`)

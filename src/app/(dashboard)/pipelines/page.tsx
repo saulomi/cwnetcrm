@@ -36,13 +36,16 @@ import { useTranslations } from "next-intl";
 // agent+. The two CTAs gate on different `useCan` capabilities,
 // not on different copy.
 
-// Spec-defined seed — name and color per the product spec.
+// Spec-defined seed — name key and color per the product spec. The
+// name is a translation key (Pipelines.page.*) resolved at creation
+// time so seeded stages match the user's locale instead of always
+// landing in English.
 const SPEC_DEFAULT_STAGES = [
-  { name: "New Lead", color: "#3b82f6", position: 0 }, // blue
-  { name: "Qualified", color: "#eab308", position: 1 }, // yellow
-  { name: "Proposal Sent", color: "#f97316", position: 2 }, // orange
-  { name: "Negotiation", color: "#8b5cf6", position: 3 }, // purple
-  { name: "Won", color: "#22c55e", position: 4 }, // green
+  { nameKey: "defaultStageNewLead", color: "#3b82f6", position: 0 }, // blue
+  { nameKey: "defaultStageQualified", color: "#eab308", position: 1 }, // yellow
+  { nameKey: "defaultStageProposalSent", color: "#f97316", position: 2 }, // orange
+  { nameKey: "defaultStageNegotiation", color: "#8b5cf6", position: 3 }, // purple
+  { nameKey: "defaultStageWon", color: "#22c55e", position: 4 }, // green
 ];
 
 export default function PipelinesPage() {
@@ -120,7 +123,7 @@ export default function PipelinesPage() {
 
     const { data: pipeline, error } = await supabase
       .from("pipelines")
-      .insert({ user_id: user.id, account_id: accountId, name: "Sales Pipeline" })
+      .insert({ user_id: user.id, account_id: accountId, name: t("defaultPipelineName") })
       .select()
       .single();
 
@@ -131,14 +134,14 @@ export default function PipelinesPage() {
 
     const stagesPayload = SPEC_DEFAULT_STAGES.map((s) => ({
       pipeline_id: pipeline.id,
-      name: s.name,
+      name: t(s.nameKey),
       color: s.color,
       position: s.position,
     }));
     await supabase.from("pipeline_stages").insert(stagesPayload);
 
     return pipeline as Pipeline;
-  }, [supabase, accountId]);
+  }, [supabase, accountId, t]);
 
   // Initial load + seed-if-empty
   useEffect(() => {
@@ -281,7 +284,7 @@ export default function PipelinesPage() {
 
     const stagesPayload = SPEC_DEFAULT_STAGES.map((s) => ({
       pipeline_id: pipeline.id,
-      name: s.name,
+      name: t(s.nameKey),
       color: s.color,
       position: s.position,
     }));
@@ -392,7 +395,7 @@ export default function PipelinesPage() {
 
       {/* Board */}
       {pipelines.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20">
+        <div className="doodle-bg flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20">
           <GitBranch className="h-12 w-12 text-muted-foreground" />
           <h3 className="mt-4 text-lg font-medium text-foreground">
             {t("noPipelinesYet")}

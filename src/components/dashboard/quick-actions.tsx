@@ -1,7 +1,7 @@
 "use client"
 
 import Link from 'next/link'
-import { UserPlus, Briefcase, Radio, Zap } from 'lucide-react'
+import { UserPlus, Briefcase, Radio, Zap, Plus } from 'lucide-react'
 import type { ComponentType } from 'react'
 
 import { useTranslations } from 'next-intl'
@@ -26,21 +26,27 @@ const ACTIONS: Action[] = [
 
 export function QuickActions() {
   const t = useTranslations('Dashboard.quickActions')
-  
+
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    // Deliberately not a repeat of MetricCard's solid rounded-xl card:
+    // these are shortcuts, not data, so they read as buttons — dashed
+    // outline at rest, filled only on hover/focus — with a trailing
+    // "+" that's true of every entry here (they all create something),
+    // not decoration.
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {ACTIONS.map((a) => {
         const Icon = a.icon
         return (
           <Link
             key={a.href}
             href={a.href}
-            className="group flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 transition-colors hover:border-border hover:bg-muted/60"
+            className="group flex items-center gap-2.5 rounded-lg border border-dashed border-border px-3.5 py-2.5 transition-colors hover:border-solid hover:border-primary/40 hover:bg-primary-soft"
           >
-            <div className={`flex h-9 w-9 items-center justify-center rounded-lg bg-muted ${a.tint}`}>
-              <Icon className="h-4 w-4" />
-            </div>
-            <span className="text-sm font-medium text-foreground">{t(a.labelKey as string)}</span>
+            <Icon className={`h-4 w-4 shrink-0 ${a.tint}`} />
+            <span className="flex-1 text-sm font-medium text-foreground">
+              {t(a.labelKey as string)}
+            </span>
+            <Plus className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-primary" />
           </Link>
         )
       })}

@@ -201,13 +201,14 @@ export function Step4ScheduleSend({
           </DialogTrigger>
           <DialogContent className="border-border bg-popover sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-popover-foreground">Confirm Broadcast</DialogTitle>
+              <DialogTitle className="text-popover-foreground">{t('scheduleSend.confirmTitle')}</DialogTitle>
               <DialogDescription className="text-muted-foreground">
-                You are about to send this broadcast to{' '}
-                <span className="font-medium text-popover-foreground">{estimatedReach.toLocaleString()}</span>{' '}
-                contacts using the{' '}
-                <span className="font-medium text-popover-foreground">{template.name}</span> template.
-                This action cannot be undone.
+                {t.rich('scheduleSend.confirmDesc', {
+                  count: estimatedReach.toLocaleString(),
+                  templateName: template.name,
+                  countTag: (chunks) => <span className="font-medium text-popover-foreground">{chunks}</span>,
+                  templateTag: (chunks) => <span className="font-medium text-popover-foreground">{chunks}</span>,
+                })}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

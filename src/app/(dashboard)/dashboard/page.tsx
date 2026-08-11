@@ -125,7 +125,7 @@ export default function DashboardPage() {
     <div className="space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
+        <h1 className="page-title">{t('title')}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {t('description')}
         </p>
@@ -141,6 +141,7 @@ export default function DashboardPage() {
               title={t('activeConversations')}
               value={metrics.activeConversations.current.toLocaleString()}
               icon={MessageSquare}
+              tint="primary"
               delta={{
                 sign: metrics.activeConversations.previous,
                 label: deltaLabel(
@@ -154,6 +155,7 @@ export default function DashboardPage() {
               title={t('newContactsToday')}
               value={metrics.newContactsToday.current.toLocaleString()}
               icon={UserPlus}
+              tint="growth"
               delta={{
                 sign:
                   metrics.newContactsToday.current - metrics.newContactsToday.previous,
@@ -168,12 +170,14 @@ export default function DashboardPage() {
               title={t('openDealsValue')}
               value={formatCurrency(metrics.openDealsValue, defaultCurrency)}
               icon={DollarSign}
+              tint="value"
               subtitle={t('openDeals', { count: metrics.openDealsCount })}
             />
             <MetricCard
               title={t('messagesSentToday')}
               value={metrics.messagesSentToday.current.toLocaleString()}
               icon={Send}
+              tint="volume"
               delta={{
                 sign:
                   metrics.messagesSentToday.current - metrics.messagesSentToday.previous,

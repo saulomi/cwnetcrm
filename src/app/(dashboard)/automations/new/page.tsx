@@ -2,6 +2,7 @@
 
 import { Suspense, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
+import { useTranslations } from "next-intl"
 
 import {
   AutomationBuilder,
@@ -25,6 +26,10 @@ export default function NewAutomationPage() {
 function NewAutomationPageInner() {
   const params = useSearchParams()
   const template = params.get("template") as TemplateSlug | null
+  // Localized gallery copy (messages/*.json) — falls back to the
+  // template's raw English name/description if a key's ever missing,
+  // same contract as the server-side Flows equivalent.
+  const tGallery = useTranslations("Automations.list.templateGallery")
 
   const initial: BuilderInitial = useMemo(() => {
     if (template && AUTOMATION_TEMPLATES[template]) {
@@ -39,8 +44,8 @@ function NewAutomationPageInner() {
         })),
       )
       return {
-        name: t.name,
-        description: t.description,
+        name: tGallery(`${template}.name`),
+        description: tGallery(`${template}.description`),
         trigger_type: t.trigger_type,
         trigger_config: t.trigger_config as Record<string, unknown>,
         is_active: false,
@@ -55,7 +60,7 @@ function NewAutomationPageInner() {
       is_active: false,
       steps: [],
     }
-  }, [template])
+  }, [template, tGallery])
 
   return <AutomationBuilder initial={initial} />
 }

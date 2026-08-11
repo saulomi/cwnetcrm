@@ -33,6 +33,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function ProfileForm() {
   const t = useTranslations('Settings.profile');
+  const tRoles = useTranslations('Settings.roles');
   const { user, profile, refreshProfile } = useAuth();
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -312,8 +313,8 @@ export function ProfileForm() {
             <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-muted-foreground">{t('role')}</dt>
-                <dd className="mt-0.5 font-mono text-foreground">
-                  {profile?.role ?? 'user'}
+                <dd className="mt-0.5 text-foreground">
+                  {profile?.account_role ? tRoles(profile.account_role) : '—'}
                 </dd>
               </div>
               <div>

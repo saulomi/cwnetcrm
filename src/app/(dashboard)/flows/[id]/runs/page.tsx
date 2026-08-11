@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
+import { useDateFnsLocale } from "@/hooks/use-date-fns-locale";
 
 import { useTranslations } from "next-intl";
 
@@ -184,7 +185,7 @@ export default function FlowRunsPage() {
         <ArrowLeft className="h-3 w-3" />
         {flow.name}
       </button>
-      <h1 className="text-xl font-semibold text-foreground">{t("title")}</h1>
+      <h1 className="page-title">{t("title")}</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         {t("description")}
       </p>
@@ -224,6 +225,7 @@ function RunCard({
   onToggle: () => void;
   t: ReturnType<typeof useTranslations>;
 }) {
+  const dateFnsLocale = useDateFnsLocale();
   const meta = STATUS_META[run.status];
   const StatusIcon = meta.icon;
   const contactLabel =
@@ -231,6 +233,7 @@ function RunCard({
   const duration = run.ended_at
     ? formatDistanceToNow(new Date(run.ended_at), {
         addSuffix: false,
+        locale: dateFnsLocale,
       })
     : null;
   return (
@@ -273,7 +276,7 @@ function RunCard({
             )}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-            <span>{t("started", { time: format(new Date(run.started_at), "PP p") })}</span>
+            <span>{t("started", { time: format(new Date(run.started_at), "PP p", { locale: dateFnsLocale }) })}</span>
             {run.reprompt_count > 0 && (
               <span>· {t("reprompts", { count: run.reprompt_count })}</span>
             )}

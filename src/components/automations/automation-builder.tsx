@@ -1154,7 +1154,7 @@ function StepRenderer({
                   onClick={() => props.deleteStepAt(path)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  {t("delete", { defaultValue: "Delete" })}
+                  {t("delete")}
                 </Button>
               </div>
             </div>
@@ -1362,7 +1362,7 @@ function StepEditor({
             <Input
               value={(cfg.value as string) ?? ""}
               onChange={(e) => set({ value: e.target.value })}
-              placeholder={t("config.placeholderValue")}
+              placeholder={t.raw("config.placeholderValue")}
               className="bg-muted text-foreground"
             />
           </FieldBlock>
@@ -1483,7 +1483,7 @@ function StepEditor({
     case "close_conversation":
       return (
         <p className="text-xs text-muted-foreground">
-          {t("config.closeConversationHint", { defaultValue: "Sets the conversation status to \"closed\". No configuration needed." })}
+          {t("config.closeConversationHint")}
         </p>
       )
     default:

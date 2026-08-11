@@ -148,6 +148,20 @@ html[data-mode="light"] {
 /* ---- ACCENT: primary color ---- */
 
 :root,
+html[data-theme="brand"] {
+  --primary: oklch(0.722 0.121 234);
+  --primary-foreground: oklch(0.16 0.02 234);
+  --primary-hover: oklch(0.782 0.11 234);
+  --primary-soft: oklch(0.722 0.121 234 / 0.12);
+  --primary-soft-2: oklch(0.722 0.121 234 / 0.22);
+  --ring: oklch(0.722 0.121 234);
+  --chart-1: oklch(0.722 0.121 234);
+  --chart-2: oklch(0.513 0.095 244);
+  --sidebar-primary: oklch(0.722 0.121 234);
+  --sidebar-primary-foreground: oklch(0.16 0.02 234);
+  --sidebar-ring: oklch(0.722 0.121 234);
+}
+
 html[data-theme="violet"] {
   --primary: oklch(0.526 0.247 293);
   --primary-foreground: oklch(0.985 0 0);
@@ -226,5 +240,25 @@ html[data-theme="rose"] {
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer components {
+  /* Page-level <h1>. Deliberately larger and heavier than anything else
+   * on the page — including the dashboard's 28px stat figures — so the
+   * page title reads as the loudest thing in the hierarchy. Centralized
+   * here because every page previously hand-rolled its own (drifting)
+   * copy of "text-2xl font-bold text-foreground". */
+  .page-title {
+    @apply text-3xl font-extrabold tracking-tight text-foreground;
+  }
+
+  /* WhatsApp-doodle texture used behind every "nothing here yet" state
+   * (inbox, contacts, pipelines, automations) so emptiness reads as the
+   * same surface throughout the product instead of a bare icon+text
+   * block in some places and a textured panel in others. */
+  .doodle-bg {
+    @apply bg-background bg-repeat;
+    background-image: url("/inbox-doodle.svg");
   }
 }

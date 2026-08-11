@@ -86,7 +86,7 @@ function SettingsPageInner() {
   return (
     <div>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="page-title">
           {t('pageTitle')}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">

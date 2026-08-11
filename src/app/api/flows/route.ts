@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { supabaseAdmin } from '@/lib/flows/admin-client'
 import { getFlowTemplate } from '@/lib/flows/templates'
+import { getLocalizedTemplateCopy } from '@/lib/i18n/template-locale'
 
 /**
  * GET /api/flows — list the caller's flows.
@@ -107,13 +108,21 @@ export async function POST(request: Request) {
         { status: 400 },
       )
     }
+    // Seed the clone with the localized gallery copy (messages/*.json)
+    // rather than the template's raw English name/description, so a
+    // flow created from a template lands in the account's configured
+    // language instead of always English.
+    const localizedCopy = await getLocalizedTemplateCopy('Flows', body.template_slug, {
+      name: template.name,
+      description: template.description,
+    })
     const { data: flow, error: flowErr } = await admin
       .from('flows')
       .insert({
         user_id: userId,
         account_id: accountId,
-        name: body.name?.trim() || template.name,
-        description: template.description,
+        name: body.name?.trim() || localizedCopy.name,
+        description: localizedCopy.description,
         status: 'draft',
         trigger_type: template.trigger_type,
         trigger_config: template.trigger_config,

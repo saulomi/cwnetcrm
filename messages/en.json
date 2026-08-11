@@ -1,4 +1,8 @@
 {
+  "Common": {
+    "loading": "Loading...",
+    "close": "Close"
+  },
   "LoginPage": {
     "titleAccept": "Sign in to accept",
     "titleWelcome": "Welcome back",
@@ -13,6 +17,75 @@
     "signIn": "Sign in",
     "noAccount": "Don't have an account?",
     "createAccount": "Create account"
+  },
+  "SignupPage": {
+    "errorPasswordMismatch": "Passwords do not match",
+    "errorPasswordTooShort": "Password must be at least 6 characters",
+    "successTitle": "Check your email",
+    "successDesc": "We've sent a confirmation link to <bold>{email}</bold>. Please check your inbox and click the link to verify your account.",
+    "backToSignIn": "Back to sign in",
+    "titleJoin": "Create account & join",
+    "title": "Create account",
+    "descJoin": "Verify your email, then accept the invitation to join your team.",
+    "desc": "Get started with CRM Template for WhatsApp",
+    "fullNameLabel": "Full name",
+    "fullNamePlaceholder": "John Doe",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "At least 6 characters",
+    "confirmPasswordLabel": "Confirm password",
+    "confirmPasswordPlaceholder": "Repeat your password",
+    "creatingAccount": "Creating account...",
+    "createAccount": "Create account",
+    "alreadyHaveAccount": "Already have an account?",
+    "signIn": "Sign in"
+  },
+  "ForgotPasswordPage": {
+    "successTitle": "Check your email",
+    "successDesc": "We've sent a password reset link to <bold>{email}</bold>. Please check your inbox.",
+    "backToSignIn": "Back to sign in",
+    "title": "Reset password",
+    "description": "Enter your email and we'll send you a reset link",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "sending": "Sending...",
+    "sendResetLink": "Send reset link"
+  },
+  "JoinPage": {
+    "verifying": "Verifying invitation…",
+    "roleAdmin": "Admin",
+    "roleAgent": "Agent",
+    "roleViewer": "Viewer",
+    "failNotFoundTitle": "Invite not found",
+    "failNotFoundBody": "This link doesn’t match a valid invitation. Double-check the URL or ask the person who invited you to send a new one.",
+    "failUsedTitle": "Invite already used",
+    "failUsedBody": "This invitation has already been accepted. If that wasn’t you, ask the account admin to send a fresh link.",
+    "failExpiredTitle": "Invite expired",
+    "failExpiredBody": "This invitation has expired. Ask the account admin to send a new one — they take a few seconds to generate.",
+    "failServerErrorTitle": "Something went wrong",
+    "failServerErrorBody": "We couldn’t verify this invitation right now. Try refreshing the page in a moment.",
+    "tryAgain": "Try again",
+    "createNewAccountInstead": "Create a new account instead",
+    "signIn": "Sign in",
+    "invitedTo": "You're invited to <account>{accountName}</account>",
+    "youllJoinAs": "You'll join as",
+    "linkValidUntil": ". Link valid until {date}.",
+    "acceptInvitation": "Accept invitation",
+    "accepting": "Accepting…",
+    "acceptNote": "Accepting moves your login into <account>{accountName}</account>. Your empty personal account from signup will be cleaned up.",
+    "conflictTitle": "Can't join {accountName} with this account",
+    "conflictBody": "To join <account>{accountName}</account>, sign out and sign up again with a different email address. The invite link stays valid as long as it hasn't expired.",
+    "staySignedIn": "Stay signed in",
+    "signOutDifferentEmail": "Sign out & use a different email",
+    "signingOut": "Signing out…",
+    "createAccountJoin": "Create account & join",
+    "alreadyHaveAccount": "I already have an account",
+    "toastWelcome": "Welcome to the team",
+    "toastFailedAccept": "Failed to accept invitation",
+    "toastCouldNotReach": "Could not reach the server",
+    "toastConflictDefault": "You are already in another account. Sign in with a different email to join this one.",
+    "toastCouldNotSignOut": "Could not sign out. Try refreshing the page."
   },
   "Sidebar": {
     "title": "CRM Template for WhatsApp",
@@ -48,6 +121,8 @@
     "pipelines": "Pipelines",
     "broadcasts": "Broadcasts",
     "automations": "Automations",
+    "flows": "Flows",
+    "aiAgents": "AI Agents",
     "settings": "Settings",
     "openMenu": "Open menu",
     "openAccountMenu": "Open account menu",
@@ -495,7 +570,13 @@
       "toastFailedMoveDeal": "Failed to move deal",
       "toastFailedCreatePipeline": "Failed to create pipeline",
       "toastPipelineCreated": "Pipeline created",
-      "toastNotLinkedToAccount": "Your profile is not linked to an account."
+      "toastNotLinkedToAccount": "Your profile is not linked to an account.",
+      "defaultStageNewLead": "New Lead",
+      "defaultStageQualified": "Qualified",
+      "defaultStageProposalSent": "Proposal Sent",
+      "defaultStageNegotiation": "Negotiation",
+      "defaultStageWon": "Won",
+      "defaultPipelineName": "Sales Pipeline"
     },
     "board": {
       "dropDealHere": "Drop a deal here",
@@ -765,7 +846,9 @@
         "sending": "Sending...",
         "preparing": "Preparing...",
         "progressDesc": "Processing {current} of {total} recipients...",
-        "toastFailedPreview": "Failed to load preview data"
+        "toastFailedPreview": "Failed to load preview data",
+        "confirmTitle": "Confirm Broadcast",
+        "confirmDesc": "You are about to send this broadcast to <countTag>{count}</countTag> contacts using the <templateTag>{templateName}</templateTag> template. This action cannot be undone."
       }
     }
   },
@@ -776,6 +859,24 @@
       "create": "Create Automation",
       "retry": "Retry",
       "templatesTitle": "Quick-start templates",
+      "templateGallery": {
+        "welcome_message": {
+          "name": "Welcome Message",
+          "description": "Auto-reply to first-time contacts with a greeting."
+        },
+        "out_of_office": {
+          "name": "Out of Office",
+          "description": "Auto-reply during off-hours so nobody is left waiting."
+        },
+        "lead_qualifier": {
+          "name": "Lead Qualifier",
+          "description": "Ask qualification questions to filter inbound leads."
+        },
+        "follow_up_reminder": {
+          "name": "Follow-up Reminder",
+          "description": "Send a nudge if a contact has not replied within 24 hours."
+        }
+      },
       "emptyTitle": "No automations yet",
       "emptyDesc": "Pick a template above or create one from scratch.",
       "runs": "{count} run",
@@ -933,6 +1034,7 @@
         "no": "No"
       },
       "addStep": "Add step",
+      "delete": "Delete",
       "config": {
         "messageText": "Message text",
         "placeholderMessageText": "Hi! Thanks for reaching out…",
@@ -999,6 +1101,20 @@
       "createDesc": "Start from a template or build from scratch.",
       "startTemplate": "Start from a template",
       "nodeCount": "{count} {count, plural, =1 {node} other {nodes}}",
+      "templateGallery": {
+        "welcome_menu": {
+          "name": "Welcome menu",
+          "description": "Greet customers who type a keyword and route them to the right agent based on whether they're new or existing."
+        },
+        "faq_bot": {
+          "name": "FAQ bot",
+          "description": "Answer common questions automatically. Customer picks a topic from a list; the bot replies with the answer and ends."
+        },
+        "lead_capture": {
+          "name": "Lead capture",
+          "description": "Greet first-time inbounds, capture name + email + company, then hand off to sales with the answers in the note."
+        }
+      },
       "startBlank": "Or start blank",
       "placeholderName": "e.g. Welcome menu",
       "cancel": "Cancel",
@@ -1041,6 +1157,24 @@
       "triggerKeywordTitle": "A message contains a keyword",
       "triggerFirstInboundTitle": "Customer's first ever inbound message",
       "triggerManualTitle": "Manual only (no auto-trigger)",
+      "editorHeader": {
+        "backToFlows": "Back to Flows",
+        "namePlaceholder": "Flow name",
+        "nameAria": "Flow name",
+        "edited": "Edited",
+        "editedTitle": "Unsaved changes — hit Save to persist",
+        "runs": "Runs",
+        "delete": "Delete",
+        "pause": "Pause",
+        "activate": "Activate",
+        "activateDisabledTitle": "Fix the issues below before activating",
+        "save": "Save",
+        "descriptionPlaceholder": "Add a short description (internal — customers don't see this)",
+        "descriptionAria": "Flow description",
+        "statusDraft": "Draft",
+        "statusActive": "Active",
+        "statusArchived": "Archived"
+      },
       "keywordsLabel": "Keywords (comma-separated)",
       "keywordsPlaceholder": "support, help, hi",
       "entryNodeTitle": "Entry node:",
@@ -1197,6 +1331,77 @@
       "modeRemove": "Remove",
       "tagPicked": "{mode} tag {tag}…",
       "tagNone": "{mode} tag (none picked)"
+    }
+  },
+  "QuickReplies": {
+    "title": "Quick replies",
+    "description": "Reusable snippets — plain text or a saved interactive message — that agents can insert from the inbox composer.",
+    "newQuickReply": "New quick reply",
+    "emptyState": "No quick replies yet. Create one to reuse it across conversations.",
+    "toastNameRequired": "Give the quick reply a name.",
+    "toastSaveFailed": "Couldn't save the quick reply.",
+    "toastUpdated": "Quick reply updated.",
+    "toastCreated": "Quick reply created.",
+    "deleteConfirm": "Delete this quick reply?",
+    "toastDeleteFailed": "Couldn't delete the quick reply.",
+    "dialogEditTitle": "Edit quick reply",
+    "dialogNewTitle": "New quick reply",
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. Business hours",
+    "tabText": "Text",
+    "tabInteractive": "Interactive",
+    "contentPlaceholder": "The message text to insert",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "Notifications": {
+    "title": "Notifications",
+    "description": "Conversations other teammates assign to you show up here.",
+    "retry": "Retry",
+    "markAllAsRead": "Mark all as read",
+    "emptyTitle": "No notifications yet",
+    "emptyDesc": "You'll see an alert here when someone assigns you a conversation.",
+    "unreadAria": "Unread",
+    "toastMarkReadFailed": "Failed to mark notification as read",
+    "toastMarkAllFailed": "Failed to mark all as read"
+  },
+  "Agents": {
+    "page": {
+      "title": "AI Agents",
+      "description": "Your bring-your-own-key AI agent — set it up, then test it in the playground before it replies to customers in the inbox.",
+      "tabPlayground": "Playground",
+      "tabSetup": "Setup",
+      "tabUsage": "Usage"
+    },
+    "playground": {
+      "title": "Playground",
+      "subtitle": "— test replies as if you were a customer",
+      "reset": "Reset",
+      "emptyPrompt": "Send a message to see how your agent would reply.",
+      "emptyHint": "It uses your knowledge base and behaves exactly like the auto-reply bot — including handoff.",
+      "goToSetup": "Not set up yet? Go to Setup",
+      "handoffNote": "Would hand off to a human here",
+      "thinking": "Thinking…",
+      "placeholder": "Type a customer message…",
+      "toastNotConfigured": "No agent configured yet — finish Setup first.",
+      "toastGenericError": "Couldn't get a reply.",
+      "toastNetworkError": "Couldn't reach the agent."
+    },
+    "usage": {
+      "title": "Token usage",
+      "description": "Tokens spent on your provider key by drafts and the auto-reply bot. Counts only — no message content is stored here.",
+      "lastNDays": "Last {days} days",
+      "loadFailed": "Failed to load usage",
+      "noUsage": "No AI usage in the last {days} days yet.",
+      "noUsageHint": "This fills in as the assistant drafts and auto-replies.",
+      "statTotalTokens": "Total tokens",
+      "statLlmCalls": "LLM calls",
+      "statAutoReply": "Auto-reply",
+      "statDrafts": "Drafts",
+      "tokensPerDay": "Tokens per day",
+      "byModel": "By model",
+      "callsCount": "{count} {count, plural, =1 {call} other {calls}}",
+      "truncatedNote": "Showing a partial window — usage is high enough that only the most recent records are summarized here."
     }
   },
   "Settings": {
@@ -1580,7 +1785,7 @@
     },
     "apiKeys": {
       "title": "API keys",
-      "description": "Keys authenticate the public REST API (<apiCode>/api/v1</apiCode>) so you can build your own automations. Send them as <headerCode>Authorization: Bearer &lt;key&gt;</headerCode>.",
+      "description": "Keys authenticate the public REST API (<apiCode>/api/v1</apiCode>) so you can build your own automations. Send them as <headerCode>Authorization: Bearer '<key>'</headerCode>.",
       "newApiKey": "New API key",
       "noApiKeys": "No API keys yet.",
       "createOneHint": "Click <bold>New API key</bold> to create one.",

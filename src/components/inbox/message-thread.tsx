@@ -29,6 +29,8 @@ import {
   PanelRightClose,
 } from "lucide-react";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
+import type { Locale } from "date-fns/locale";
+import { useDateFnsLocale } from "@/hooks/use-date-fns-locale";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -111,11 +113,21 @@ interface MessageThreadProps {
   onToggleContactPanel?: () => void;
 }
 
-function formatDateSeparator(dateStr: string, t: ReturnType<typeof useTranslations>): string {
+function formatDateSeparator(
+  dateStr: string,
+  t: ReturnType<typeof useTranslations>,
+  dateFnsLocale: Locale,
+): string {
   const date = new Date(dateStr);
   if (isToday(date)) return t("today");
   if (isYesterday(date)) return t("yesterday");
-  return format(date, "MMMM d, yyyy");
+  // date-fns has no locale-aware "long date" preset token, so pick the
+  // grammatically natural pattern per locale rather than forcing every
+  // language through the English "MMMM d, yyyy" shape.
+  const pattern = dateFnsLocale.code?.startsWith("pt")
+    ? "d 'de' MMMM 'de' yyyy"
+    : "MMMM d, yyyy";
+  return format(date, pattern, { locale: dateFnsLocale });
 }
 
 function groupMessagesByDate(messages: Message[]) {
@@ -143,15 +155,12 @@ const STATUS_OPTIONS: { label: string; value: ConversationStatus; color: string 
 
 /**
  * WhatsApp-style doodle background applied to the chat area (both the
- * active thread and the empty state). The SVG tile lives at
- * `/public/inbox-doodle.svg`; the slate-950 colour sits underneath so
- * the doodles read as a subtle pattern rather than a stark grid.
- *
- * Defined once at module scope so the two render paths can't drift —
- * if we ever switch the asset, both spots update together.
+ * active thread and the empty state). Now a shared `.doodle-bg` utility
+ * (globals.css) — every "nothing here yet" panel in the app (contacts,
+ * pipelines, automations) uses the same class, so this is just the one
+ * spot the pattern originated from.
  */
-const DOODLE_BG_CLASSES =
-  "bg-background bg-[url('/inbox-doodle.svg')] bg-repeat";
+const DOODLE_BG_CLASSES = "doodle-bg";
 
 export function MessageThread({
   conversation,
@@ -171,6 +180,7 @@ export function MessageThread({
   const t = useTranslations("Inbox.messageThread");
   const tTimer = useTranslations("Inbox.sessionTimer");
   const tQuote = useTranslations("Inbox.replyQuote");
+  const dateFnsLocale = useDateFnsLocale();
 
   const { user } = useAuth();
   const { getPresence, getRow, now } = usePresence();
@@ -1077,7 +1087,7 @@ export function MessageThread({
                 {/* Date separator */}
                 <div className="mb-4 flex items-center justify-center">
                   <span className="rounded-full bg-muted px-3 py-1 text-[10px] font-medium text-muted-foreground">
-                    {formatDateSeparator(group.date, t)}
+                    {formatDateSeparator(group.date, t, dateFnsLocale)}
                   </span>
                 </div>
                 {/* Messages */}

@@ -397,6 +397,12 @@ export interface Broadcast {
   read_count: number;
   replied_count: number;
   failed_count: number;
+  /**
+   * Set while a server-side delivery pass is fanning out, NULL when
+   * idle. Claimed with a conditional UPDATE so two resumes can't both
+   * send. Added in migration 038.
+   */
+  delivery_locked_at?: string | null;
   created_at: string;
 }
 
@@ -421,6 +427,13 @@ export interface BroadcastRecipient {
    * Added in migration 003.
    */
   whatsapp_message_id?: string;
+  /**
+   * Positional body values for this recipient's template send
+   * ({{1}}, {{2}}, …), frozen when the broadcast was planned so a
+   * server-side resume reproduces the original pass exactly.
+   * Added in migration 038; null on rows created before it.
+   */
+  template_params?: string[] | null;
   created_at: string;
   contact?: Contact;
 }
@@ -460,7 +473,15 @@ export type AutomationLogStatus = 'success' | 'partial' | 'failed';
 
 export interface KeywordMatchTriggerConfig {
   keywords: string[];
-  match_type: 'exact' | 'contains';
+  /**
+   * `contains` (the default) is a raw substring test, so a short keyword
+   * matches inside longer words — "k" fires on "thanks". `word` is the
+   * boundary-aware alternative added for issue #409; see
+   * `matchesWholeWord` in `@/lib/automations/engine` for its exact
+   * semantics. Flows carry their own keyword config and stay
+   * substring-only (`@/lib/flows/types`).
+   */
+  match_type: 'exact' | 'contains' | 'word';
   case_sensitive?: boolean;
 }
 

@@ -1,6 +1,6 @@
 # Suporte a múltiplos provedores de WhatsApp (Meta + UAZAPI)
 
-Status: Plano 1 (schema) implementado
+Status: Plano 2 (camada de envio) implementado
 Data: 2026-08-10
 
 ## Objetivo

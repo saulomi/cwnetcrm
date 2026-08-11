@@ -1,6 +1,6 @@
 # Suporte a múltiplos provedores de WhatsApp (Meta + UAZAPI)
 
-Status: aprovado para planejamento
+Status: Plano 1 (schema) implementado
 Data: 2026-08-10
 
 ## Objetivo

@@ -1,10 +1,13 @@
-import { sendTextMessage, sendTemplateMessage } from '@/lib/whatsapp/meta-api'
 import type { InteractiveMessagePayload } from '@/lib/whatsapp/interactive'
 import {
   engineSendInteractiveButtons,
   engineSendInteractiveList,
 } from '@/lib/flows/meta-send'
-import { decrypt } from '@/lib/whatsapp/encryption'
+import {
+  resolveChannelForSend,
+  resolveProvider,
+  ChannelResolutionError,
+} from '@/lib/whatsapp/channel-resolution'
 import {
   sanitizePhoneForMeta,
   isValidE164,
@@ -135,16 +138,28 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
     throw new Error(`contact phone invalid: ${contact.phone}`)
   }
 
-  const { data: config, error: configErr } = await db
-    .from('whatsapp_config')
-    .select('*')
+  const { data: conversation } = await db
+    .from('conversations')
+    .select('channel_id')
+    .eq('id', input.conversationId)
     .eq('account_id', input.accountId)
-    .single()
-  if (configErr || !config) {
-    throw new Error('WhatsApp not configured for this account')
-  }
+    .maybeSingle()
 
-  const accessToken = decrypt(config.access_token)
+  let resolvedChannel
+  let provider
+  try {
+    resolvedChannel = await resolveChannelForSend(
+      db,
+      input.accountId,
+      conversation?.channel_id
+    )
+    provider = await resolveProvider(db, resolvedChannel)
+  } catch (err) {
+    if (err instanceof ChannelResolutionError) {
+      throw new Error('WhatsApp not configured for this account')
+    }
+    throw err
+  }
 
   // Local template row — read for the body we persist below, not for
   // the Meta payload (the wire shape is deliberately unchanged here).
@@ -164,9 +179,7 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
 
   const attempt = async (phone: string): Promise<string> => {
     if (input.kind === 'template') {
-      const r = await sendTemplateMessage({
-        phoneNumberId: config.phone_number_id,
-        accessToken,
+      const r = await provider.sendTemplate({
         to: phone,
         templateName: input.templateName,
         language: input.language,
@@ -174,12 +187,7 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
       })
       return r.messageId
     }
-    const r = await sendTextMessage({
-      phoneNumberId: config.phone_number_id,
-      accessToken,
-      to: phone,
-      text: input.text,
-    })
+    const r = await provider.sendText({ to: phone, text: input.text })
     return r.messageId
   }
 
@@ -229,6 +237,7 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
     template_name,
     message_id: waMessageId,
     status: 'sent',
+    channel_id: resolvedChannel.channelId,
   })
   if (msgErr) {
     // Meta already has the message; record the DB error but don't pretend

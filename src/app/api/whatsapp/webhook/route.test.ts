@@ -35,7 +35,7 @@ vi.mock('@supabase/supabase-js', () => ({
   createClient: () => ({
     from(table: string) {
       switch (table) {
-        case 'whatsapp_config':
+        case 'meta_channels':
           return {
             select: () => ({
               eq: () =>
@@ -45,6 +45,7 @@ vi.mock('@supabase/supabase-js', () => ({
                       account_id: 'acc-1',
                       user_id: 'user-1',
                       access_token: 'enc',
+                      channel_id: 'ch-1',
                     },
                   ],
                   error: null,
@@ -53,6 +54,8 @@ vi.mock('@supabase/supabase-js', () => ({
           }
         case 'conversations':
           // findOrCreateConversation: select().eq().eq().order().limit()
+          // The channel-pin write in processInboundMessage also lands
+          // here: update().eq().
           return {
             select: () => ({
               eq: () => ({
@@ -66,6 +69,9 @@ vi.mock('@supabase/supabase-js', () => ({
                   }),
                 }),
               }),
+            }),
+            update: () => ({
+              eq: () => Promise.resolve({ error: null }),
             }),
           }
         case 'broadcast_recipients':

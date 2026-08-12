@@ -12,7 +12,8 @@ import { SendMessageError } from './send-message';
 type ContactRow = { id: string; phone: string; name?: string | null };
 
 interface Script {
-  config?: { user_id: string } | null; // whatsapp_config.maybeSingle
+  config?: { user_id: string } | null; // whatsapp_config.maybeSingle (resolveAuditUserId — unrelated to hasChannel)
+  hasChannel?: boolean; // channels .eq(account_id).limit(1) — the "is anything connected" pre-check
   contactCandidates?: ContactRow[]; // contacts .like (same every call)
   /** Per-call `.like` results — overrides contactCandidates. Lets a
    *  test simulate "miss, then hit" for the unique-race path. */
@@ -48,13 +49,20 @@ function makeDb(script: Script): SupabaseClient {
     eq: () => builder,
     order: () => builder,
     limit: () => {
-      // Only the conversation lookup terminates on `.limit(1)`.
+      // Only the conversation lookup and the channels pre-check
+      // terminate on `.limit(1)`.
       if (table === 'conversations' && mode === 'select') {
         const row = script.existingConversationByCall
           ? (script.existingConversationByCall[convLookupCalls] ?? null)
           : (script.existingConversation ?? null);
         convLookupCalls++;
         return Promise.resolve({ data: row ? [row] : [], error: null });
+      }
+      if (table === 'channels' && mode === 'select') {
+        return Promise.resolve({
+          data: script.hasChannel ? [{ id: 'ch-1' }] : [],
+          error: null,
+        });
       }
       return Promise.resolve({ data: [], error: null });
     },
@@ -122,7 +130,7 @@ describe('resolveConversationByPhone', () => {
   });
 
   it('fails with whatsapp_not_configured when no config owner exists', async () => {
-    const db = makeDb({ config: null });
+    const db = makeDb({ hasChannel: false });
     await resolveConversationByPhone(db, 'acct', '+14155550123').catch(
       (e: SendMessageError) => {
         expect(e.code).toBe('whatsapp_not_configured');
@@ -136,6 +144,7 @@ describe('resolveConversationByPhone', () => {
 
   it('returns the existing contact + conversation without creating', async () => {
     const db = makeDb({
+      hasChannel: true,
       config: { user_id: 'owner-1' },
       contactCandidates: [{ id: 'c1', phone: '14155550123' }],
       existingConversation: { id: 'cv1' },
@@ -154,6 +163,7 @@ describe('resolveConversationByPhone', () => {
 
   it('creates contact + conversation when none exist', async () => {
     const db = makeDb({
+      hasChannel: true,
       config: { user_id: 'owner-1' },
       contactCandidates: [],
       insertedContactId: 'c2',
@@ -178,6 +188,7 @@ describe('resolveConversationByPhone', () => {
     // 23505 unique violation, and the post-race re-lookup now returns
     // the row a concurrent writer created.
     const db = makeDb({
+      hasChannel: true,
       config: { user_id: 'owner-1' },
       contactCandidatesByCall: [[], [{ id: 'c-raced', phone: '14155550123' }]],
       insertContactError: { code: '23505' },
@@ -195,6 +206,7 @@ describe('resolveConversationByPhone', () => {
     // post-race re-lookup returns the winning conversation — no duplicate
     // conversation is created (issue #363).
     const db = makeDb({
+      hasChannel: true,
       config: { user_id: 'owner-1' },
       contactCandidates: [{ id: 'c1', phone: '14155550123' }],
       existingConversationByCall: [null, { id: 'cv-raced' }],
@@ -205,6 +217,27 @@ describe('resolveConversationByPhone', () => {
       conversationId: 'cv-raced',
       contactId: 'c1',
       contactCreated: false,
+    });
+  });
+
+  it('does not require a Meta config row when a non-Meta channel exists', async () => {
+    const db = makeDb({
+      hasChannel: true,
+      // resolveAuditUserId's fallback to `accounts.owner_user_id` isn't
+      // wired in this fake (its default branch returns { data: null,
+      // error: null }), so a real `config: null` would make
+      // resolveAuditUserId throw. Wire config.user_id here so this test
+      // stays scoped to proving the channels pre-check itself no longer
+      // requires a Meta `whatsapp_config` row.
+      config: { user_id: 'owner-1' },
+      contactCandidates: [{ id: 'contact-1', phone: '+15551234567' }],
+      existingConversation: { id: 'conv-1' },
+    });
+    await expect(
+      resolveConversationByPhone(db, 'acc-1', '+15551234567')
+    ).resolves.toMatchObject({
+      conversationId: 'conv-1',
+      contactId: 'contact-1',
     });
   });
 });

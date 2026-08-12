@@ -7,6 +7,7 @@ import {
   verifyPhoneNumber,
 } from '@/lib/whatsapp/meta-api'
 import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
+import { setChannelStatus } from '@/lib/whatsapp/channel-status'
 
 /**
  * Resolve the caller's account_id from their profile. Inlined here
@@ -399,6 +400,27 @@ export async function POST(request: Request) {
           { status: 500 }
         )
       }
+    }
+
+    // Mirror the resulting connection status onto channels.status too —
+    // meta_channels.status alone isn't enough once an account can have
+    // more than one channel (resolveChannelForSend's no-default fallback
+    // reads channels.status, not meta_channels.status). Looked up via
+    // supabaseAdmin() (the lazily-initialised service-role client
+    // defined at the top of this file) rather than the session-scoped
+    // `supabase`, matching how the rest of this route already reaches
+    // for elevated access for cross-cutting reads/writes.
+    const { data: savedRow } = await supabaseAdmin()
+      .from('meta_channels')
+      .select('channel_id')
+      .eq('account_id', accountId)
+      .maybeSingle()
+    if (savedRow?.channel_id) {
+      await setChannelStatus(
+        supabaseAdmin(),
+        savedRow.channel_id,
+        registrationError ? 'disconnected' : 'connected'
+      )
     }
 
     if (registrationError) {

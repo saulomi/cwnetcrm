@@ -1,7 +1,7 @@
 import { NextResponse, after } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption'
-import { getMediaUrl, downloadMedia } from '@/lib/whatsapp/meta-api'
+import { getMediaUrl } from '@/lib/whatsapp/meta-api'
 import { normalizePhone } from '@/lib/whatsapp/phone-utils'
 import { verifyMetaWebhookSignature } from '@/lib/whatsapp/webhook-signature'
 import {
@@ -336,6 +336,7 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
           await processInboundMessage(supabaseAdmin(), {
             ...base,
             type: 'reaction',
+            providerType: message.type,
             replyToWaMessageId: message.reaction?.message_id,
             reactionEmoji: message.reaction?.emoji || undefined,
           })
@@ -347,6 +348,7 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
         await processInboundMessage(supabaseAdmin(), {
           ...base,
           type: normalizeMessageType(message.type),
+          providerType: message.type,
           text: parsed.contentText ?? undefined,
           mediaUrl: parsed.mediaUrl ?? undefined,
           interactiveReplyId: parsed.interactiveReplyId ?? undefined,

@@ -65,6 +65,12 @@ export interface NormalizedInboundMessage {
   replyToWaMessageId?: string
   /** type === 'reaction' only. Empty/absent means the reaction was removed. */
   reactionEmoji?: string
+  /**
+   * Raw provider-side type string (e.g. Meta's 'sticker'/'button'), used
+   * only for the last-message-preview fallback text — kept separate from
+   * the normalized `type` so that text stays provider-faithful.
+   */
+  providerType?: string
 }
 
 // ============================================================
@@ -386,7 +392,7 @@ export async function handleStatusUpdate(
     isValidStatusTransition(recipient.status, status.status)
   ) {
     const update: Record<string, unknown> = { status: status.status }
-    if (status.status === 'sent' && !('sent_at' in update)) update.sent_at = tsIso
+    if (status.status === 'sent') update.sent_at = tsIso
     if (status.status === 'delivered') update.delivered_at = tsIso
     if (status.status === 'read') update.read_at = tsIso
 
@@ -581,7 +587,7 @@ export async function processInboundMessage(
   // increment (issue #369).
   const { error: convError } = await db.rpc('bump_conversation_on_inbound', {
     p_conversation_id: conversation.id,
-    p_last_message_text: contentText || `[${msg.type}]`,
+    p_last_message_text: contentText || `[${msg.providerType ?? msg.type}]`,
   })
   if (convError) {
     console.error('[inbound-processor] Error updating conversation:', convError)

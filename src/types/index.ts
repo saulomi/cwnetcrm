@@ -287,6 +287,18 @@ export interface WhatsAppConfig {
   last_registration_error?: string;
 }
 
+export interface Channel {
+  id: string;
+  account_id: string;
+  provider: 'meta' | 'uazapi';
+  label: string;
+  status: 'connected' | 'disconnected' | 'connecting' | 'error';
+  is_default: boolean;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Raw Meta status enum. We persist this verbatim from Meta (sync + webhook)
 // rather than collapsing to a local TitleCase set — distinctions like
 // PAUSED vs DISABLED vs IN_APPEAL drive the edit/resubmit/delete flows.

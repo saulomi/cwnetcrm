@@ -60,12 +60,13 @@ export function UazapiChannelForm({ onConnected }: { onConnected: () => void }) 
         return;
       }
       if (data.qrCode) setQrCode(data.qrCode);
-      if (Date.now() > pollDeadline.current) {
+    } catch (err) {
+      console.error('UAZAPI poll failed:', err);
+    } finally {
+      if (pollTimer.current && Date.now() > pollDeadline.current) {
         stopPolling();
         setStage('timed-out');
       }
-    } catch (err) {
-      console.error('UAZAPI poll failed:', err);
     }
   }
 

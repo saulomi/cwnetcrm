@@ -1745,7 +1745,21 @@
         "connecting": "Conectando…",
         "connectionError": "Erro de conexão",
         "loadFailed": "Falha ao carregar os canais.",
-        "empty": "Nenhum canal de WhatsApp conectado ainda."
+        "empty": "Nenhum canal de WhatsApp conectado ainda.",
+        "form": {
+          "label": "Nome do canal",
+          "labelPlaceholder": "ex.: Vendas",
+          "baseUrl": "URL do servidor UAZAPI",
+          "baseUrlPlaceholder": "https://seu-servidor.uazapi.com",
+          "create": "Criar e conectar",
+          "creating": "Criando…",
+          "scanQr": "Escaneie este QR code com o WhatsApp do seu celular (Aparelhos conectados → Conectar um aparelho).",
+          "waitingForScan": "Aguardando leitura…",
+          "connected": "Conectado como {phone}",
+          "timedOut": "Ainda não conectado. O QR code pode ter expirado — tente novamente.",
+          "checkAgain": "Verificar novamente",
+          "createFailed": "Falha ao criar o canal UAZAPI."
+        }
       }
     },
     "sections": {

@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { decrypt, encrypt, isLegacyFormat } from './encryption'
 import { createMetaProvider } from './meta-provider'
+import { createUazapiProvider } from './uazapi-provider'
 import type { WhatsAppProvider } from './provider'
 
 export type ChannelResolutionErrorCode = 'not_configured' | 'ambiguous' | 'not_implemented'
@@ -89,21 +90,31 @@ export async function resolveChannelForSend(
 /**
  * Load the resolved channel's credentials and build its provider.
  *
- * UAZAPI channels are schema-valid (Plan 1) but have no send-side
- * implementation until a later plan — `resolveChannelForSend` can still
- * route to one (e.g. it's the account's only connected channel), so
- * this throws a clear, typed error rather than a stack trace deep in a
- * provider that doesn't exist yet.
+ * UAZAPI channels are schema-valid (Plan 1) — `resolveChannelForSend`
+ * can route to one (e.g. it's the account's only connected channel),
+ * and this builds a real UazapiProvider from its decrypted instance
+ * token, mirroring the Meta branch below.
  */
 export async function resolveProvider(
   db: SupabaseClient,
   channel: ResolvedChannel
 ): Promise<WhatsAppProvider> {
   if (channel.provider === 'uazapi') {
-    throw new ChannelResolutionError(
-      'not_implemented',
-      'UAZAPI channels cannot send messages yet.'
-    )
+    const { data: uazapiChannel, error } = await db
+      .from('uazapi_channels')
+      .select('*')
+      .eq('channel_id', channel.channelId)
+      .single()
+    if (error || !uazapiChannel) {
+      throw new ChannelResolutionError(
+        'not_configured',
+        'UAZAPI channel not configured. Please finish connecting it in Settings.'
+      )
+    }
+    return createUazapiProvider({
+      baseUrl: uazapiChannel.base_url,
+      instanceToken: decrypt(uazapiChannel.instance_token),
+    })
   }
 
   const { data: metaChannel, error } = await db

@@ -143,12 +143,6 @@ function metaChannelDb(
 }
 
 describe('resolveProvider', () => {
-  it('throws not_implemented for a uazapi channel', async () => {
-    await expect(
-      resolveProvider({} as SupabaseClient, { channelId: 'ch-1', provider: 'uazapi' })
-    ).rejects.toMatchObject({ code: 'not_implemented' })
-  })
-
   it('throws not_configured when the meta_channels row is missing', async () => {
     const db = metaChannelDb({}, {})
     await expect(
@@ -179,5 +173,49 @@ describe('resolveProvider', () => {
     // Fire-and-forget — give the microtask queue a tick to run it.
     await new Promise((r) => setTimeout(r, 0))
     expect(captured.update?.access_token).toBe('enc:tok-1')
+  })
+})
+
+describe('resolveProvider — uazapi', () => {
+  it('builds a UazapiProvider from the decrypted instance token', async () => {
+    const db = {
+      from: (table: string) => {
+        if (table === 'uazapi_channels') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: () =>
+                  Promise.resolve({
+                    data: {
+                      id: 'uaz-1',
+                      channel_id: 'ch-2',
+                      base_url: 'https://demo.uazapi.example',
+                      instance_token: 'plain-instance-token',
+                    },
+                    error: null,
+                  }),
+              }),
+            }),
+          }
+        }
+        throw new Error(`unexpected table: ${table}`)
+      },
+    } as unknown as SupabaseClient
+
+    const provider = await resolveProvider(db, { channelId: 'ch-2', provider: 'uazapi' })
+    expect(provider).toBeTruthy()
+    expect(typeof provider.sendText).toBe('function')
+  })
+
+  it('throws not_configured when the uazapi_channels row is missing', async () => {
+    const db = {
+      from: () => ({
+        select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'no rows' } }) }) }),
+      }),
+    } as unknown as SupabaseClient
+
+    await expect(resolveProvider(db, { channelId: 'ch-3', provider: 'uazapi' })).rejects.toMatchObject({
+      code: 'not_configured',
+    })
   })
 })

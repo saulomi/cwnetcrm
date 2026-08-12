@@ -1734,7 +1734,29 @@
       "step4_3": "Paste the <strong class=\"text-foreground\">Webhook Callback URL</strong> from above",
       "step4_4": "Enter the same <strong class=\"text-foreground\">Verify Token</strong> you set here",
       "step4_5": "Subscribe to \"messages\" webhook field",
-      "metaDocs": "Meta WhatsApp API Documentation"
+      "metaDocs": "Meta WhatsApp API Documentation",
+      "channels": {
+        "heading": "Channels",
+        "headingDesc": "Every WhatsApp connection on this account. Add as many as you need.",
+        "addChannel": "Add channel",
+        "chooseProvider": "Choose a provider",
+        "chooseProviderDesc": "Pick which kind of WhatsApp connection to add.",
+        "providerMeta": "Meta WhatsApp Cloud API",
+        "providerMetaDesc": "Official API. Requires a Meta Business/App setup.",
+        "providerUazapi": "UAZAPI (QR code)",
+        "providerUazapiDesc": "Unofficial API. Connect by scanning a QR code, like WhatsApp Web.",
+        "default": "Default",
+        "setDefault": "Set as default",
+        "remove": "Remove",
+        "removeConfirm": "Remove this channel? Conversations already using it keep their history, but new messages won't be able to send through it.",
+        "renaming": "Saving…",
+        "editLabel": "Rename",
+        "notConnected": "Not connected",
+        "connecting": "Connecting…",
+        "connectionError": "Connection error",
+        "loadFailed": "Failed to load channels.",
+        "empty": "No WhatsApp channel connected yet."
+      }
     },
     "sections": {
       "overview": "Overview",

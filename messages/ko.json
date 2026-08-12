@@ -1734,7 +1734,29 @@
       "step4_3": "위의 <strong class=\"text-foreground\">웹훅 콜백 URL</strong>을 붙여넣기",
       "step4_4": "여기서 설정한 것과 동일한 <strong class=\"text-foreground\">인증 토큰</strong>을 입력",
       "step4_5": "\"messages\" 웹훅 필드를 구독",
-      "metaDocs": "Meta WhatsApp API 문서"
+      "metaDocs": "Meta WhatsApp API 문서",
+      "channels": {
+        "heading": "채널",
+        "headingDesc": "이 계정의 모든 WhatsApp 연결입니다. 필요한 만큼 추가하세요.",
+        "addChannel": "채널 추가",
+        "chooseProvider": "제공자 선택",
+        "chooseProviderDesc": "추가할 WhatsApp 연결 종류를 선택하세요.",
+        "providerMeta": "Meta WhatsApp Cloud API",
+        "providerMetaDesc": "공식 API입니다. Meta 비즈니스/앱 설정이 필요합니다.",
+        "providerUazapi": "UAZAPI (QR 코드)",
+        "providerUazapiDesc": "비공식 API입니다. WhatsApp Web처럼 QR 코드를 스캔해 연결합니다.",
+        "default": "기본",
+        "setDefault": "기본으로 설정",
+        "remove": "제거",
+        "removeConfirm": "이 채널을 제거하시겠습니까? 이미 사용 중인 대화는 기록이 유지되지만, 이 채널로는 더 이상 새 메시지를 보낼 수 없습니다.",
+        "renaming": "저장 중…",
+        "editLabel": "이름 변경",
+        "notConnected": "연결되지 않음",
+        "connecting": "연결 중…",
+        "connectionError": "연결 오류",
+        "loadFailed": "채널을 불러오지 못했습니다.",
+        "empty": "아직 연결된 WhatsApp 채널이 없습니다."
+      }
     },
     "sections": {
       "overview": "개요",

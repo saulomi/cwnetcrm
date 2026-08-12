@@ -1724,7 +1724,29 @@
       "step4_3": "Cole a <strong class=\"text-foreground\">URL de retorno do webhook</strong> acima",
       "step4_4": "Digite o mesmo <strong class=\"text-foreground\">token de verificação</strong> definido aqui",
       "step4_5": "Inscreva-se no campo de webhook \"messages\"",
-      "metaDocs": "Documentação da Meta WhatsApp API"
+      "metaDocs": "Documentação da Meta WhatsApp API",
+      "channels": {
+        "heading": "Canais",
+        "headingDesc": "Todas as conexões de WhatsApp desta conta. Adicione quantas precisar.",
+        "addChannel": "Adicionar canal",
+        "chooseProvider": "Escolha um provedor",
+        "chooseProviderDesc": "Escolha que tipo de conexão de WhatsApp adicionar.",
+        "providerMeta": "Meta WhatsApp Cloud API",
+        "providerMetaDesc": "API oficial. Requer configuração de App/Business da Meta.",
+        "providerUazapi": "UAZAPI (QR code)",
+        "providerUazapiDesc": "API não-oficial. Conecte escaneando um QR code, como no WhatsApp Web.",
+        "default": "Padrão",
+        "setDefault": "Definir como padrão",
+        "remove": "Remover",
+        "removeConfirm": "Remover este canal? As conversas que já o usam mantêm o histórico, mas novas mensagens não poderão ser enviadas por ele.",
+        "renaming": "Salvando…",
+        "editLabel": "Renomear",
+        "notConnected": "Não conectado",
+        "connecting": "Conectando…",
+        "connectionError": "Erro de conexão",
+        "loadFailed": "Falha ao carregar os canais.",
+        "empty": "Nenhum canal de WhatsApp conectado ainda."
+      }
     },
     "sections": {
       "overview": "Visão geral",

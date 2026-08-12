@@ -13,6 +13,7 @@ type ContactRow = { id: string; phone: string; name?: string | null };
 
 interface Script {
   config?: { user_id: string } | null; // whatsapp_config.maybeSingle (resolveAuditUserId — unrelated to hasChannel)
+  accountOwner?: string | null; // accounts.owner_user_id.maybeSingle (resolveAuditUserId fallback)
   hasChannel?: boolean; // channels .eq(account_id).limit(1) — the "is anything connected" pre-check
   contactCandidates?: ContactRow[]; // contacts .like (same every call)
   /** Per-call `.like` results — overrides contactCandidates. Lets a
@@ -76,6 +77,13 @@ function makeDb(script: Script): SupabaseClient {
     maybeSingle: () => {
       if (table === 'whatsapp_config')
         return Promise.resolve({ data: script.config ?? null, error: null });
+      if (table === 'accounts')
+        return Promise.resolve({
+          data: script.accountOwner
+            ? { owner_user_id: script.accountOwner }
+            : null,
+          error: null,
+        });
       return Promise.resolve({ data: null, error: null });
     },
     single: () => {
@@ -223,13 +231,10 @@ describe('resolveConversationByPhone', () => {
   it('does not require a Meta config row when a non-Meta channel exists', async () => {
     const db = makeDb({
       hasChannel: true,
-      // resolveAuditUserId's fallback to `accounts.owner_user_id` isn't
-      // wired in this fake (its default branch returns { data: null,
-      // error: null }), so a real `config: null` would make
-      // resolveAuditUserId throw. Wire config.user_id here so this test
-      // stays scoped to proving the channels pre-check itself no longer
-      // requires a Meta `whatsapp_config` row.
-      config: { user_id: 'owner-1' },
+      // No Meta `whatsapp_config` row at all — resolveAuditUserId falls
+      // back to `accounts.owner_user_id`, wired here via accountOwner.
+      config: null,
+      accountOwner: 'owner-1',
       contactCandidates: [{ id: 'contact-1', phone: '+15551234567' }],
       existingConversation: { id: 'conv-1' },
     });

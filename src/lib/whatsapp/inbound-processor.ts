@@ -55,6 +55,12 @@ export interface NormalizedInboundMessage {
   text?: string
   /** Already resolved/proxied — never a provider-auth-gated URL. */
   mediaUrl?: string
+  /**
+   * MIME type of `mediaUrl`'s content, as reported by the provider
+   * (migration 039). Undefined for text/non-media messages and for
+   * providers that don't surface it — the column tolerates NULL.
+   */
+  mediaType?: string
   /** Stable id of a tapped button/list row; drives Flows routing. */
   interactiveReplyId?: string
   /**
@@ -503,6 +509,7 @@ export async function processInboundMessage(
 
   const contentText = msg.text ?? null
   const mediaUrl = msg.mediaUrl ?? null
+  const mediaType = msg.mediaType ?? null
   const interactiveReplyId = msg.interactiveReplyId ?? null
 
   // Resolve swipe-reply context if present. A missing parent is fine —
@@ -554,6 +561,7 @@ export async function processInboundMessage(
         content_type: contentType,
         content_text: contentText,
         media_url: mediaUrl,
+        media_type: mediaType,
         message_id: msg.waMessageId,
         status: 'delivered',
         created_at: new Date(parseInt(msg.timestamp) * 1000).toISOString(),

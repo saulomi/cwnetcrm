@@ -2,6 +2,7 @@ import { NextResponse, after } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption'
 import { getMediaUrl } from '@/lib/whatsapp/meta-api'
+import { mirrorInboundMedia } from '@/lib/whatsapp/mirror-inbound-media'
 import { normalizePhone } from '@/lib/whatsapp/phone-utils'
 import { verifyMetaWebhookSignature } from '@/lib/whatsapp/webhook-signature'
 import {
@@ -343,7 +344,18 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
           continue
         }
 
-        const parsed = await parseMessageContent(message, decryptedAccessToken)
+        // Per-account opt-out for the inbound-media mirror (migration
+        // 039/040). Default ON: the column is NOT NULL DEFAULT TRUE, but
+        // a row read before that migration lands would have it
+        // undefined, and losing attachments is the failure mode worth
+        // avoiding.
+        const parsed = await parseMessageContent(
+          message,
+          decryptedAccessToken,
+          metaChannel.mirror_inbound_media !== false
+            ? { accountId: metaChannel.account_id as string }
+            : null
+        )
 
         await processInboundMessage(supabaseAdmin(), {
           ...base,
@@ -351,6 +363,7 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
           providerType: message.type,
           text: parsed.contentText ?? undefined,
           mediaUrl: parsed.mediaUrl ?? undefined,
+          mediaType: parsed.mediaType ?? undefined,
           interactiveReplyId: parsed.interactiveReplyId ?? undefined,
           replyToWaMessageId: message.context?.id,
         })
@@ -361,7 +374,10 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
 
 async function parseMessageContent(
   message: WhatsAppMessage,
-  accessToken: string
+  accessToken: string,
+  // Tenancy + opt-out for the media mirror. Null disables mirroring
+  // entirely, which is what the account-level toggle does.
+  mirror: { accountId: string } | null
 ): Promise<{
   contentText: string | null
   mediaUrl: string | null
@@ -379,11 +395,41 @@ async function parseMessageContent(
   // the args swapped, so every verification hit an invalid Meta URL and
   // fell through to the catch block, leaving mediaUrl as null. That's
   // why images showed up as empty bubbles in the inbox.
+  //
+  // Beyond verifying, this is where inbound media gets COPIED into the
+  // `chat-media` bucket (issue #466). Meta deletes media ~30 days after
+  // receipt, so the `/api/whatsapp/media/<id>` proxy URL we used to
+  // store is a pointer with an expiry date on it — every inbound
+  // attachment silently became "Photo unavailable" a month later.
+  // Mirroring stores a durable public URL instead.
+  //
+  // The mirror is strictly best-effort. `mirrorInboundMedia` swallows
+  // its own failures and returns null, and we fall back to the proxy
+  // URL — a webhook that throws would have Meta retry the delivery and
+  // re-run everything downstream, which is a far worse outcome than an
+  // attachment that expires.
   const verifyAndBuildUrl = async (
-    mediaId: string
+    mediaId: string,
+    fileName?: string | null
   ): Promise<string | null> => {
     try {
-      await getMediaUrl({ mediaId, accessToken })
+      const info = await getMediaUrl({ mediaId, accessToken })
+
+      if (mirror) {
+        const mirrored = await mirrorInboundMedia({
+          storage: supabaseAdmin().storage,
+          accountId: mirror.accountId,
+          mediaId,
+          downloadUrl: info.url,
+          accessToken,
+          mimeType: info.mimeType,
+          fileSize: info.fileSize,
+          fileName,
+          messageTimestamp: message.timestamp,
+        })
+        if (mirrored) return mirrored
+      }
+
       return `/api/whatsapp/media/${mediaId}`
     } catch (error) {
       console.error(
@@ -435,7 +481,13 @@ async function parseMessageContent(
           ...empty,
           contentText:
             message.document.caption || message.document.filename || null,
-          mediaUrl: await verifyAndBuildUrl(message.document.id),
+          // The sender's own filename becomes the mirrored object's
+          // name, so saving the attachment yields `invoice.pdf` even
+          // when a caption displaced the filename in content_text.
+          mediaUrl: await verifyAndBuildUrl(
+            message.document.id,
+            message.document.filename
+          ),
           mediaType: message.document.mime_type,
         }
       }

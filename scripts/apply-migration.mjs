@@ -8,7 +8,7 @@
 //
 // Usage:
 //   $env:DATABASE_URL = "postgresql://...pooler.supabase.com:5432/postgres"
-//   node scripts/apply-migration.mjs supabase/migrations/039_whatsapp_channels.sql
+//   node scripts/apply-migration.mjs supabase/migrations/040_whatsapp_channels.sql
 import { readFileSync } from 'node:fs'
 import { Client } from 'pg'
 

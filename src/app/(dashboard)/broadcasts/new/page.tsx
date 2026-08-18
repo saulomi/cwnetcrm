@@ -45,6 +45,8 @@ export default function NewBroadcastPage() {
   >({});
   const [headerMediaUrl, setHeaderMediaUrl] = useState('');
   const [name, setName] = useState('');
+  const [channelId, setChannelId] = useState<string | null>(null);
+  const [sendDelayMs, setSendDelayMs] = useState<number | null>(null);
 
   async function handleSend() {
     if (!template) return;
@@ -62,6 +64,8 @@ export default function NewBroadcastPage() {
         },
         variables,
         headerMediaUrl,
+        channelId,
+        sendDelayMs: sendDelayMs ?? undefined,
       });
       router.push(`/broadcasts/${broadcastId}`);
     } catch (err) {
@@ -112,6 +116,8 @@ export default function NewBroadcastPage() {
         type: audience.type,
         tagIds: audience.tagIds,
       },
+      channel_id: channelId,
+      send_delay_ms: sendDelayMs,
       status: 'draft',
       total_recipients: 0,
       sent_count: 0,
@@ -226,6 +232,10 @@ export default function NewBroadcastPage() {
               onBack={() => setCurrentStep(2)}
               isProcessing={isProcessing}
               progress={progress}
+              channelId={channelId}
+              onChannelIdChange={setChannelId}
+              sendDelayMs={sendDelayMs}
+              onSendDelayMsChange={setSendDelayMs}
             />
           )}
         </div>

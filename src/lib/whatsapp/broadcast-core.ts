@@ -34,6 +34,10 @@ import { resolveTemplateRow } from '@/lib/whatsapp/template-body';
 import type { MessageTemplate } from '@/types';
 import { findOrCreateContact } from '@/lib/api/v1/contacts';
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /** Thrown by createBroadcast on a caller-visible failure; route maps it. */
 export class BroadcastError extends Error {
   readonly code: string;
@@ -76,6 +80,8 @@ export interface BroadcastPlan {
   planned: PlannedRecipient[];
   /** Phones rejected up front (invalid E.164) — counted as failed. */
   rejected: number;
+  /** Optional pacing delay (ms) between each recipient send. */
+  delayMs?: number;
 }
 
 const MAX_RECIPIENTS = 1000;
@@ -263,7 +269,8 @@ export async function deliverBroadcast(
   db: SupabaseClient,
   plan: BroadcastPlan
 ): Promise<void> {
-  for (const recipient of plan.planned) {
+  for (let i = 0; i < plan.planned.length; i++) {
+    const recipient = plan.planned[i];
     const variants = phoneVariants(recipient.phone);
     let sentMessageId: string | null = null;
     let lastError: string | null = null;
@@ -306,6 +313,15 @@ export async function deliverBroadcast(
           error_message: lastError || 'Unknown error',
         })
         .eq('id', recipient.recipientRowId);
+    }
+
+    // Pace sends, but never pay the delay after the LAST recipient —
+    // nothing downstream is waiting on that gap, so it would be a pure
+    // waste (and, in delivery-completion tests, a pending timer with
+    // nothing left to advance it).
+    const isLast = i === plan.planned.length - 1;
+    if (!isLast && plan.delayMs && plan.delayMs > 0) {
+      await sleep(plan.delayMs);
     }
   }
 

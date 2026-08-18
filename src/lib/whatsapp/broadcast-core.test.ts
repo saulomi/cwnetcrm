@@ -2,9 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   createBroadcast,
+  deliverBroadcast,
   finalizeBroadcastStatus,
   BroadcastError,
 } from './broadcast-core';
+import type { BroadcastPlan } from './broadcast-core';
+import type { WhatsAppProvider } from '@/lib/whatsapp/provider';
 
 // Contact resolution and token decryption are exercised elsewhere — stub
 // them so these tests focus on the persistence boundary.
@@ -233,5 +236,99 @@ describe('finalizeBroadcastStatus', () => {
       'b-1',
     );
     expect(writes.update?.status).toBe('sent');
+  });
+});
+
+// ============================================================
+// deliverBroadcast pacing (delayMs). No prior coverage of
+// deliverBroadcast existed in this file — this builds its own
+// `db`/`provider` mocks from scratch, following the chainable-stub
+// convention used by `statusDb` above and by
+// channel-resolution.test.ts (an object whose methods return itself
+// until a terminal method/`then` resolves a promise).
+// ============================================================
+
+function makeDeliverDb() {
+  const recipientUpdates: Array<{ id: string; row: Record<string, unknown> }> = [];
+  const database = {
+    from(table: string) {
+      if (table === 'broadcast_recipients') {
+        // Doubles as (a) the per-recipient `.update(...).eq('id', ...)`
+        // deliverBroadcast issues, and (b) the count queries
+        // finalizeBroadcastStatus issues afterwards (`.select(...).eq(...)`,
+        // resolved via `then` since these tests don't assert on status
+        // derivation — that's covered by the `finalizeBroadcastStatus`
+        // suite above).
+        const chain: Record<string, unknown> = {
+          update: (row: Record<string, unknown>) => ({
+            eq: (_col: string, val: string) => {
+              recipientUpdates.push({ id: val, row });
+              return Promise.resolve({ data: null, error: null });
+            },
+          }),
+          select: () => chain,
+          eq: () => chain,
+          then: (resolve: (r: { count: number; error: null }) => unknown) =>
+            resolve({ count: 0, error: null }),
+        };
+        return chain;
+      }
+      if (table === 'broadcasts') {
+        return {
+          update: () => ({
+            eq: () => Promise.resolve({ data: null, error: null }),
+          }),
+        };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    },
+  } as unknown as SupabaseClient;
+  return { db: database, recipientUpdates };
+}
+
+function makePlan(overrides: Partial<BroadcastPlan> = {}): BroadcastPlan {
+  const provider = {
+    sendTemplate: vi.fn().mockResolvedValue({ messageId: 'm1' }),
+  } as unknown as WhatsAppProvider;
+  return {
+    broadcastId: 'b-1',
+    templateName: 'promo',
+    templateLanguage: 'en_US',
+    channelId: 'ch-1',
+    provider,
+    templateRow: null,
+    planned: [
+      { recipientRowId: 'r-1', phone: '14155550123', params: [] },
+      { recipientRowId: 'r-2', phone: '14155550124', params: [] },
+    ],
+    rejected: 0,
+    ...overrides,
+  };
+}
+
+describe('deliverBroadcast pacing (delayMs)', () => {
+  it('sleeps delayMs between each recipient send when set on the plan', async () => {
+    vi.useFakeTimers();
+    const { db } = makeDeliverDb();
+    const plan = makePlan({ delayMs: 500 });
+
+    const deliverPromise = deliverBroadcast(db, plan);
+    await vi.advanceTimersByTimeAsync(0); // let the first send fire
+    expect(plan.provider.sendTemplate).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(500); // the pacing delay
+    await deliverPromise;
+    expect(plan.provider.sendTemplate).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it('does not delay when delayMs is unset (existing behavior)', async () => {
+    const { db } = makeDeliverDb();
+    const plan = makePlan();
+
+    // No fake timers here at all — if deliverBroadcast waited on
+    // anything, this would hang until the test's own timeout instead
+    // of resolving.
+    await deliverBroadcast(db, plan);
+    expect(plan.provider.sendTemplate).toHaveBeenCalledTimes(2);
   });
 });

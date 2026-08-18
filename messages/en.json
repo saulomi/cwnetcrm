@@ -1979,5 +1979,9 @@
       "reindexTooltip": "Re-embed all documents (e.g. after adding an embeddings key)",
       "loading": "Loading…"
     }
+  },
+  "WhatsappChannels": {
+    "selectChannel": "Select a channel",
+    "accountDefault": "Account default"
   }
 }

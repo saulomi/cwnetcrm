@@ -1979,5 +1979,9 @@
       "reindexTooltip": "모든 문서를 다시 임베딩합니다 (예: 임베딩 키 추가 후)",
       "loading": "불러오는 중…"
     }
+  },
+  "WhatsappChannels": {
+    "selectChannel": "채널 선택",
+    "accountDefault": "계정 기본값"
   }
 }

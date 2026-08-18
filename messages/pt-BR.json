@@ -1967,5 +1967,9 @@
       "reindexTooltip": "Reindexar todos os documentos (ex.: após adicionar uma chave de embeddings)",
       "loading": "Carregando…"
     }
+  },
+  "WhatsappChannels": {
+    "selectChannel": "Selecionar um canal",
+    "accountDefault": "Padrão da conta"
   }
 }

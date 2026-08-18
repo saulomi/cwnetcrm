@@ -150,7 +150,7 @@ export async function planBroadcastResume(
 ): Promise<ResumePlan> {
   const { data: broadcast, error: bcError } = await db
     .from('broadcasts')
-    .select('id, template_name, template_language')
+    .select('id, template_name, template_language, channel_id, send_delay_ms')
     .eq('id', broadcastId)
     .eq('account_id', accountId)
     .maybeSingle();
@@ -212,7 +212,7 @@ export async function planBroadcastResume(
   let resolvedChannel;
   let provider;
   try {
-    resolvedChannel = await resolveChannelForSend(db, accountId, null);
+    resolvedChannel = await resolveChannelForSend(db, accountId, broadcast.channel_id ?? null);
     provider = await resolveProvider(db, resolvedChannel);
   } catch (err) {
     if (err instanceof ChannelResolutionError) {
@@ -242,6 +242,7 @@ export async function planBroadcastResume(
     channelId: resolvedChannel.channelId,
     provider,
     templateRow: resolvedTemplate.row,
+    delayMs: broadcast.send_delay_ms ?? undefined,
     planned: slice.map((row) => ({
       recipientRowId: row.id,
       phone: sanitizePhoneForMeta(contactPhone(row) ?? ''),

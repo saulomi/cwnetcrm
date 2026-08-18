@@ -126,6 +126,10 @@ interface PlanWrites {
   statusFilter?: unknown;
   failedIds?: unknown;
   failedUpdate?: Record<string, unknown>;
+  /** The `id` a `channels` lookup was filtered on, if any — lets tests
+   * see which channel `resolveChannelForSend` was actually asked to
+   * resolve, distinct from the `is_default` fallback branch. */
+  channelIdQueried?: unknown;
 }
 
 function planDb(fx: PlanFixture, writes: PlanWrites = {}): SupabaseClient {
@@ -133,7 +137,10 @@ function planDb(fx: PlanFixture, writes: PlanWrites = {}): SupabaseClient {
     from(table: string) {
       const b: Record<string, unknown> = {
         select: () => b,
-        eq: () => b,
+        eq: (col: string, val: unknown) => {
+          if (table === 'channels' && col === 'id') writes.channelIdQueried = val;
+          return b;
+        },
         order: () => b,
         in: (col: string, vals: unknown) => {
           if (col === 'status') writes.statusFilter = vals;
@@ -381,5 +388,68 @@ describe('planBroadcastResume', () => {
       'pending',
     );
     expect(plan.templateRow?.language).toBe('en');
+  });
+
+  it('resolves the channel the original broadcast used, not the current account default', async () => {
+    const writes: PlanWrites = {};
+    await planBroadcastResume(
+      planDb(
+        {
+          // The account's CURRENT default channel would resolve to
+          // whatever `channel` here returns, but the original
+          // broadcast's own channel_id must be what's queried for.
+          broadcast: { ...BROADCAST, channel_id: 'ch-original', send_delay_ms: null },
+          channel: CHANNEL,
+          metaChannel: META_CHANNEL,
+          recipients: [recipient('r1', '+15551234567')],
+        },
+        writes,
+      ),
+      'acct-1',
+      'bc-1',
+      'pending',
+    );
+
+    expect(writes.channelIdQueried).toBe('ch-original');
+  });
+
+  it('carries send_delay_ms from the broadcast row onto the returned plan', async () => {
+    const { plan } = await planBroadcastResume(
+      planDb({
+        broadcast: { ...BROADCAST, channel_id: 'ch-1', send_delay_ms: 750 },
+        channel: CHANNEL,
+        metaChannel: META_CHANNEL,
+        recipients: [recipient('r1', '+15551234567')],
+      }),
+      'acct-1',
+      'bc-1',
+      'pending',
+    );
+
+    expect(plan.delayMs).toBe(750);
+  });
+
+  it('still resolves the account default when the original broadcast has no channel_id (pre-Plan-5 rows)', async () => {
+    const writes: PlanWrites = {};
+    const { plan } = await planBroadcastResume(
+      planDb(
+        {
+          broadcast: { ...BROADCAST, channel_id: null, send_delay_ms: null },
+          channel: CHANNEL,
+          metaChannel: META_CHANNEL,
+          recipients: [recipient('r1', '+15551234567')],
+        },
+        writes,
+      ),
+      'acct-1',
+      'bc-1',
+      'pending',
+    );
+
+    // No `id`-filtered channels lookup happened — resolveChannelForSend
+    // fell straight through to the is_default branch, unchanged from
+    // pre-Plan-5 behavior.
+    expect(writes.channelIdQueried).toBeUndefined();
+    expect(plan.delayMs).toBeUndefined();
   });
 });

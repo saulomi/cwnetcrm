@@ -1,6 +1,6 @@
 # Suporte a múltiplos provedores de WhatsApp (Meta + UAZAPI)
 
-Status: Plano 3 (entrada/inbound) implementado
+Status: Plano 4 (provedor UAZAPI + UI de Settings) implementado
 Data: 2026-08-10
 
 ## Objetivo

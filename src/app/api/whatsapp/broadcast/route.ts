@@ -19,6 +19,17 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+// The fan-out loop below paces sends with a client-supplied delay
+// (`send_delay_ms`) between recipients. Left unbounded, a large value
+// times SEND_BATCH_SIZE recipients can sleep well past the platform's
+// default serverless duration — if the request is killed mid-sleep,
+// the caller (use-broadcast-sending.ts) marks the whole batch failed,
+// including recipients that already sent, which then get duplicate-
+// resent on retry. Cap it, and give the route explicit headroom to
+// match — same pattern as src/app/api/whatsapp/webhook/route.ts.
+export const MAX_SEND_DELAY_MS = 10_000
+export const maxDuration = 60
+
 interface BroadcastResult {
   phone: string
   status: 'sent' | 'failed'
@@ -124,6 +135,13 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+
+    // Clamp server-side — never trust the raw body value for how long
+    // to sleep inside this request handler.
+    const clampedDelayMs =
+      typeof send_delay_ms === 'number'
+        ? Math.min(Math.max(0, send_delay_ms), MAX_SEND_DELAY_MS)
+        : undefined
 
     let resolvedChannel
     try {
@@ -241,8 +259,8 @@ export async function POST(request: Request) {
       // waste (and, in tests that drive completion via fake timers, a
       // pending timer with nothing left to advance it).
       const isLast = i === recipients.length - 1
-      if (!isLast && typeof send_delay_ms === 'number' && send_delay_ms > 0) {
-        await sleep(send_delay_ms)
+      if (!isLast && typeof clampedDelayMs === 'number' && clampedDelayMs > 0) {
+        await sleep(clampedDelayMs)
       }
     }
 

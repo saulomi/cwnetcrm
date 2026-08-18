@@ -6,7 +6,9 @@ import {
   claimBroadcastDelivery,
   planBroadcastResume,
   releaseBroadcastDelivery,
+  MAX_RESUME_DELAY_MS,
   RESUME_MAX_PER_REQUEST,
+  RESUME_TIME_BUDGET_MS,
 } from './broadcast-resume';
 
 vi.mock('@/lib/whatsapp/encryption', () => ({
@@ -427,6 +429,46 @@ describe('planBroadcastResume', () => {
     );
 
     expect(plan.delayMs).toBe(750);
+  });
+
+  it('clamps an out-of-range send_delay_ms before using it, same ceiling as the create endpoint', async () => {
+    const { plan } = await planBroadcastResume(
+      planDb({
+        broadcast: { ...BROADCAST, channel_id: 'ch-1', send_delay_ms: 999_999 },
+        channel: CHANNEL,
+        metaChannel: META_CHANNEL,
+        recipients: [recipient('r1', '+15551234567')],
+      }),
+      'acct-1',
+      'bc-1',
+      'pending',
+    );
+
+    expect(plan.delayMs).toBe(MAX_RESUME_DELAY_MS);
+  });
+
+  it('shrinks the planned slice below RESUME_MAX_PER_REQUEST when a large send_delay_ms would blow the time budget', async () => {
+    const many = Array.from({ length: RESUME_MAX_PER_REQUEST + 25 }, (_, i) =>
+      recipient(`r${i}`, '+1555000' + String(i).padStart(4, '0')),
+    );
+    // Clamped delay ends up at MAX_RESUME_DELAY_MS (10s); the budget
+    // divided by that gives the expected slice size.
+    const { plan, remaining } = await planBroadcastResume(
+      planDb({
+        broadcast: { ...BROADCAST, channel_id: 'ch-1', send_delay_ms: 999_999 },
+        channel: CHANNEL,
+        metaChannel: META_CHANNEL,
+        recipients: many,
+      }),
+      'acct-1',
+      'bc-1',
+      'pending',
+    );
+
+    const expectedSlice = Math.floor(RESUME_TIME_BUDGET_MS / MAX_RESUME_DELAY_MS);
+    expect(expectedSlice).toBeLessThan(RESUME_MAX_PER_REQUEST);
+    expect(plan.planned).toHaveLength(expectedSlice);
+    expect(remaining).toBe(many.length - expectedSlice);
   });
 
   it('still resolves the account default when the original broadcast has no channel_id (pre-Plan-5 rows)', async () => {

@@ -40,7 +40,7 @@ vi.mock('@/lib/whatsapp/channel-resolution', () => ({
 
 const db = {}
 
-import { POST } from './route'
+import { POST, MAX_SEND_DELAY_MS } from './route'
 
 function req(body: Record<string, unknown>) {
   return { json: async () => body } as unknown as Request
@@ -84,6 +84,47 @@ describe('POST /api/whatsapp/broadcast', () => {
     // Advancing by the pacing delay lets the second (and, since it's the
     // last recipient, final) send fire and the response resolve.
     await vi.advanceTimersByTimeAsync(300)
+    const res = (await promise) as unknown as { body: { sent: number; failed: number } }
+
+    expect(resolved).toBe(true)
+    expect(sendTemplate).toHaveBeenCalledTimes(2)
+    expect(res.body).toMatchObject({ sent: 2, failed: 0 })
+
+    vi.useRealTimers()
+  })
+
+  it('clamps an over-ceiling send_delay_ms to MAX_SEND_DELAY_MS instead of sleeping the raw value', async () => {
+    vi.useFakeTimers()
+    sendTemplate.mockClear()
+
+    let resolved = false
+    const promise = POST(
+      req({
+        recipients: [
+          { phone: '+15551230000', params: [] },
+          { phone: '+15551230001', params: [] },
+        ],
+        template_name: 'promo',
+        send_delay_ms: MAX_SEND_DELAY_MS * 100, // way over the ceiling
+      })
+    ).then((res) => {
+      resolved = true
+      return res
+    })
+
+    await vi.advanceTimersByTimeAsync(0)
+    expect(sendTemplate).toHaveBeenCalledTimes(1)
+    expect(resolved).toBe(false)
+
+    // Advancing by just under the clamp ceiling must NOT be enough —
+    // proves the sleep is bounded by MAX_SEND_DELAY_MS, not the raw
+    // (100x larger) requested value.
+    await vi.advanceTimersByTimeAsync(MAX_SEND_DELAY_MS - 1)
+    expect(resolved).toBe(false)
+
+    // The remaining 1ms crosses the clamped ceiling and lets the final
+    // send fire.
+    await vi.advanceTimersByTimeAsync(1)
     const res = (await promise) as unknown as { body: { sent: number; failed: number } }
 
     expect(resolved).toBe(true)

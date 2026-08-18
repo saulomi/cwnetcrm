@@ -47,6 +47,27 @@ export const RESUME_SCOPES: readonly ResumeScope[] = [
 export const RESUME_MAX_PER_REQUEST = 1000;
 
 /**
+ * Ceiling on the per-recipient pacing delay a broadcast can carry into
+ * a resume pass. Matches the cap the create endpoint enforces on
+ * `send_delay_ms` (src/app/api/whatsapp/broadcast/route.ts) — resume
+ * reads the value off the `broadcasts` row rather than a fresh request
+ * body, but it must never trust that stored value further than a live
+ * request would.
+ */
+export const MAX_RESUME_DELAY_MS = 10_000;
+
+/**
+ * Wall-clock budget, in ms, that a resume pass's pacing sleeps are
+ * allowed to consume in total. Sized comfortably under the resume
+ * route's `maxDuration = 300` (src/app/api/whatsapp/broadcast/[id]/resume/route.ts),
+ * leaving headroom for the actual per-recipient API calls — a delay
+ * that would otherwise blow the whole slice past the function timeout
+ * instead shrinks the slice for this pass, and the rest stays
+ * 'pending' for the next Resume click.
+ */
+export const RESUME_TIME_BUDGET_MS = 240_000;
+
+/**
  * How long a `delivery_locked_at` stamp is honoured before it is read
  * as abandoned. Long enough that a legitimately slow pass is never
  * stolen from, short enough that a crashed one doesn't wedge the
@@ -196,7 +217,26 @@ export async function planBroadcastResume(
       .in('id', unsendable);
   }
 
-  const slice = sendable.slice(0, RESUME_MAX_PER_REQUEST);
+  // Clamp the same way the create endpoint clamps a live request body —
+  // this value came off the `broadcasts` row, not the current request,
+  // but it must never be trusted further than that.
+  const clampedDelayMs =
+    typeof broadcast.send_delay_ms === 'number'
+      ? Math.min(Math.max(0, broadcast.send_delay_ms), MAX_RESUME_DELAY_MS)
+      : undefined;
+
+  // A per-recipient delay multiplied by up to RESUME_MAX_PER_REQUEST
+  // recipients can add up to far more than the route's time budget —
+  // shrink the slice so the total planned sleep time stays inside it.
+  const effectiveMax =
+    clampedDelayMs && clampedDelayMs > 0
+      ? Math.min(
+          RESUME_MAX_PER_REQUEST,
+          Math.max(1, Math.floor(RESUME_TIME_BUDGET_MS / clampedDelayMs))
+        )
+      : RESUME_MAX_PER_REQUEST;
+
+  const slice = sendable.slice(0, effectiveMax);
   const remaining = sendable.length - slice.length;
 
   if (slice.length === 0) {
@@ -242,7 +282,7 @@ export async function planBroadcastResume(
     channelId: resolvedChannel.channelId,
     provider,
     templateRow: resolvedTemplate.row,
-    delayMs: broadcast.send_delay_ms ?? undefined,
+    delayMs: clampedDelayMs,
     planned: slice.map((row) => ({
       recipientRowId: row.id,
       phone: sanitizePhoneForMeta(contactPhone(row) ?? ''),

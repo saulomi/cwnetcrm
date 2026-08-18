@@ -201,6 +201,13 @@ export function ChannelsList() {
     load();
   }
 
+  // meta_channels has UNIQUE(account_id) — an account can only ever have
+  // one Meta channel. Picking "Meta" from the chooser when one already
+  // exists lands on <WhatsAppConfig />, which fetches and pre-fills that
+  // existing row and updates it on submit, not a fresh add — so the card
+  // must be disabled once a Meta channel is already connected.
+  const hasMetaChannel = (channels ?? []).some((c) => c.provider === 'meta');
+
   return (
     <section className="animate-in fade-in-50 duration-200">
       <SettingsPanelHead title={t('title')} description={t('description')} />
@@ -243,12 +250,21 @@ export function ChannelsList() {
               </DialogHeader>
               <div className="space-y-2">
                 <Card
-                  className="cursor-pointer hover:border-primary"
-                  onClick={() => setAddStep('meta')}
+                  className={
+                    hasMetaChannel
+                      ? 'cursor-not-allowed opacity-50'
+                      : 'cursor-pointer hover:border-primary'
+                  }
+                  aria-disabled={hasMetaChannel}
+                  onClick={() => {
+                    if (!hasMetaChannel) setAddStep('meta');
+                  }}
                 >
                   <CardHeader className="py-3">
                     <CardTitle className="text-sm">{tc('providerMeta')}</CardTitle>
-                    <p className="text-xs text-muted-foreground">{tc('providerMetaDesc')}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {hasMetaChannel ? tc('providerMetaTaken') : tc('providerMetaDesc')}
+                    </p>
                   </CardHeader>
                 </Card>
                 <Card

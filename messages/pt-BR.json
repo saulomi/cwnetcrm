@@ -1733,6 +1733,7 @@
         "chooseProviderDesc": "Escolha que tipo de conexão de WhatsApp adicionar.",
         "providerMeta": "Meta WhatsApp Cloud API",
         "providerMetaDesc": "API oficial. Requer configuração de App/Business da Meta.",
+        "providerMetaTaken": "Apenas um canal Meta por conta — já conectado.",
         "providerUazapi": "UAZAPI (QR code)",
         "providerUazapiDesc": "API não-oficial. Conecte escaneando um QR code, como no WhatsApp Web.",
         "default": "Padrão",

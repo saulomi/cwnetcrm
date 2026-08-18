@@ -23,20 +23,31 @@ vi.mock('./admin-client', () => ({
 
 interface CapturedWrites {
   message?: Record<string, unknown>
+  /** The `id` value queried against the `channels` table, i.e. whatever
+   *  resolveChannelForSend passed as `conversationChannelId` — lets
+   *  tests assert which channel actually won without mocking
+   *  resolveChannelForSend itself. */
+  channelIdQueried?: unknown
 }
 
 function makeDb(opts: {
   channel?: Record<string, unknown> | null
   metaChannel?: Record<string, unknown> | null
   captured: CapturedWrites
+  conversationChannelId?: string | null
 }): SupabaseClient {
   const contact = { id: 'ct-1', phone: '+15551234567' }
-  const conversation = { channel_id: null }
+  const conversation = { channel_id: opts.conversationChannelId ?? null }
   return {
     from(table: string) {
       const b: Record<string, unknown> = {
         select: () => b,
-        eq: () => b,
+        eq: (field: string, value: unknown) => {
+          if (table === 'channels' && field === 'id') {
+            opts.captured.channelIdQueried = value
+          }
+          return b
+        },
         insert: (row: Record<string, unknown>) => {
           if (table === 'messages') opts.captured.message = row
           return b
@@ -107,5 +118,46 @@ describe('engineSendText', () => {
         text: 'hello',
       })
     ).rejects.toThrow('WhatsApp not configured for this account')
+  })
+
+  it('resolves the explicit channelId ahead of the conversation channel when both are set', async () => {
+    const captured: CapturedWrites = {}
+    db = makeDb({
+      channel: { id: 'ch-override', provider: 'meta' },
+      metaChannel: { id: 'mc-1', phone_number_id: 'pn-1', access_token: 'tok' },
+      captured,
+      conversationChannelId: 'ch-conv',
+    })
+
+    await engineSendText({
+      accountId: 'acct-1',
+      userId: 'u-1',
+      conversationId: 'cv-1',
+      contactId: 'ct-1',
+      text: 'hello',
+      channelId: 'ch-override',
+    })
+
+    expect(captured.channelIdQueried).toBe('ch-override')
+  })
+
+  it('falls back to the conversation channel when channelId is not given (unchanged behavior)', async () => {
+    const captured: CapturedWrites = {}
+    db = makeDb({
+      channel: { id: 'ch-conv', provider: 'meta' },
+      metaChannel: { id: 'mc-1', phone_number_id: 'pn-1', access_token: 'tok' },
+      captured,
+      conversationChannelId: 'ch-conv',
+    })
+
+    await engineSendText({
+      accountId: 'acct-1',
+      userId: 'u-1',
+      conversationId: 'cv-1',
+      contactId: 'ct-1',
+      text: 'hello',
+    })
+
+    expect(captured.channelIdQueried).toBe('ch-conv')
   })
 })

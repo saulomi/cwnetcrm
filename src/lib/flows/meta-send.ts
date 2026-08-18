@@ -48,6 +48,9 @@ interface SendTextEngineArgs {
    *  badges it as an AI reply. Only the auto-reply bot sets this;
    *  deterministic Flow/automation sends leave it false. */
   aiGenerated?: boolean
+  /** Explicit channel override — takes priority over the conversation's
+   *  pinned channel. Set from the send_message node's config. */
+  channelId?: string | null
 }
 
 /**
@@ -95,7 +98,7 @@ export async function engineSendText(
     resolvedChannel = await resolveChannelForSend(
       db,
       args.accountId,
-      conversation?.channel_id
+      args.channelId ?? conversation?.channel_id
     )
     provider = await resolveProvider(db, resolvedChannel)
   } catch (err) {

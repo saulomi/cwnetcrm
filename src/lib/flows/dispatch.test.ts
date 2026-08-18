@@ -286,6 +286,40 @@ describe("dispatchInboundToFlows — entry triggers (#490)", () => {
     expect(result.consumed).toBe(false);
   });
 
+  it("passes the send_message node's channel_id override through to engineSendText", async () => {
+    h.state.flows = [KEYWORD_FLOW];
+    h.state.nodes = NODES.map((n) =>
+      n.node_key === "greet"
+        ? { ...n, config: { ...n.config, channel_id: "ch-override" } }
+        : n,
+    );
+
+    await dispatch({
+      kind: "text",
+      text: "order status please",
+      meta_message_id: "m1",
+    });
+
+    expect(engineSendText).toHaveBeenCalledWith(
+      expect.objectContaining({ channelId: "ch-override" }),
+    );
+  });
+
+  it("passes undefined channelId through when the send_message node has no override (unchanged behavior)", async () => {
+    h.state.flows = [KEYWORD_FLOW];
+    h.state.nodes = NODES;
+
+    await dispatch({
+      kind: "text",
+      text: "order status please",
+      meta_message_id: "m1",
+    });
+
+    expect(engineSendText).toHaveBeenCalledWith(
+      expect.objectContaining({ channelId: undefined }),
+    );
+  });
+
   it("starts a first_inbound_message flow when the first inbound is a tap", async () => {
     h.state.flows = [
       {

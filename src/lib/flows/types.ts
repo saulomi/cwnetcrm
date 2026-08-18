@@ -32,6 +32,8 @@ export interface SendMessageNodeConfig {
   text: string;
   /** Auto-advance target after the message lands at Meta. */
   next_node_key: string;
+  /** Explicit channel override. Unset = normal routing rule. */
+  channel_id?: string | null;
 }
 
 export interface SendButtonsNodeConfig {

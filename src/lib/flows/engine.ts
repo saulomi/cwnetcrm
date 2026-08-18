@@ -620,6 +620,7 @@ async function advanceFromNodeKey(
           conversationId: run.conversation_id!,
           contactId: run.contact_id!,
           text: interpolateVars(cfg.text, run.vars),
+          channelId: cfg.channel_id,
         });
         await logEvent(db, run.id, "message_sent", node.node_key, {
           node_type: "send_message",

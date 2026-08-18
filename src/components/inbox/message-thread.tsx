@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { usePresence } from "@/hooks/use-presence";
+import { useChannels } from "@/hooks/use-channels";
+import { ChannelSelect } from "@/components/whatsapp/channel-select";
 import { PresenceDot } from "@/components/presence/presence-dot";
 import { presenceLabel } from "@/lib/presence";
 import { cn } from "@/lib/utils";
@@ -75,6 +77,14 @@ interface MessageThreadProps {
     conversationId: string,
     assignedAgentId: string | null,
   ) => void;
+  /**
+   * Fired after the channel switcher successfully writes
+   * `conversations.channel_id` to Supabase, so the parent can patch its
+   * local `conversations` / `activeConversation` state (mirrors
+   * `onAssignChange`'s "child mutates, tell the parent" convention).
+   * Only rendered/wired when the account has 2+ channels.
+   */
+  onChannelChange: (conversationId: string, channelId: string) => void;
   /**
    * On mobile, the thread is shown full-screen with the conversation list
    * hidden. This callback lets the page deselect the active conversation
@@ -167,6 +177,7 @@ export function MessageThread({
   onUpdateMessage,
   onStatusChange,
   onAssignChange,
+  onChannelChange,
   onBack,
   resyncToken = 0,
   onRefresh,
@@ -180,6 +191,7 @@ export function MessageThread({
 
   const { user } = useAuth();
   const { getPresence, getRow, now } = usePresence();
+  const { channels } = useChannels();
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
@@ -870,6 +882,27 @@ export function MessageThread({
     [conversation, onAssignChange],
   );
 
+  const handleChannelSwitch = useCallback(
+    async (channelId: string | null) => {
+      if (!channelId || !conversation) return;
+
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("conversations")
+        .update({ channel_id: channelId })
+        .eq("id", conversation.id);
+
+      if (error) {
+        console.error("Failed to switch channel:", error);
+        toast.error("Failed to switch channel");
+        return;
+      }
+
+      onChannelChange(conversation.id, channelId);
+    },
+    [conversation, onChannelChange],
+  );
+
   // Empty state — same WhatsApp-style doodle background as the active
   // thread below, so swapping between empty/selected doesn't change the
   // pattern under the user's eye.
@@ -899,6 +932,10 @@ export function MessageThread({
   const assignLabel = assignedAgentId
     ? (currentAssignee?.full_name ?? t("assigned"))
     : t("assign");
+  const activeChannel =
+    channels?.find((c) => c.id === conversation.channel_id) ??
+    channels?.find((c) => c.is_default) ??
+    null;
 
   return (
     // `min-w-0` is load-bearing: the page already puts min-w-0 on the
@@ -995,6 +1032,23 @@ export function MessageThread({
                 className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")}
               />
             </button>
+          )}
+
+          {/* Channel badge + switcher — only rendered once the account
+              actually has something to switch between. A single-channel
+              account (today's common case) gets zero new UI here. */}
+          {channels && channels.length > 1 && (
+            <div className="flex items-center gap-1.5">
+              <Badge variant="outline" className="text-xs">
+                {activeChannel ? `${activeChannel.label} (${activeChannel.provider})` : "—"}
+              </Badge>
+              <ChannelSelect
+                channels={channels}
+                value={conversation.channel_id ?? null}
+                onChange={handleChannelSwitch}
+                className="h-6 w-auto text-xs"
+              />
+            </div>
           )}
 
           {/* Status dropdown */}

@@ -181,6 +181,14 @@ export interface Conversation {
   ai_autoreply_disabled?: boolean;
   ai_reply_count?: number;
   ai_handoff_summary?: string | null;
+  /**
+   * Channel this conversation is pinned to (migration 039/040's
+   * conversations.channel_id). null = resolves to the account's
+   * default channel at send time. Set automatically to whichever
+   * channel most recently delivered an inbound message from this
+   * contact (inbound-processor.ts); can be changed manually here.
+   */
+  channel_id?: string | null;
 }
 
 // ============================================================

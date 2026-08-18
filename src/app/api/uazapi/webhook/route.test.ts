@@ -66,6 +66,28 @@ describe('POST /api/uazapi/webhook', () => {
     expect(h.processInboundMessage).not.toHaveBeenCalled()
   })
 
+  it('rejects a request with a wrong-length secret without throwing (timingSafeEqual length guard)', async () => {
+    const res = await POST(
+      req(
+        { instance_id: 'inst-1', event: 'message', message: { id: 'm1', from: '5511999998888', type: 'text', text: 'hi' } },
+        'short'
+      )
+    )
+    expect((res as unknown as { init?: { status: number } }).init?.status).toBe(401)
+    expect(h.processInboundMessage).not.toHaveBeenCalled()
+  })
+
+  it('rejects a request with a missing secret header', async () => {
+    const res = await POST(
+      req(
+        { instance_id: 'inst-1', event: 'message', message: { id: 'm1', from: '5511999998888', type: 'text', text: 'hi' } },
+        null as unknown as string
+      )
+    )
+    expect((res as unknown as { init?: { status: number } }).init?.status).toBe(401)
+    expect(h.processInboundMessage).not.toHaveBeenCalled()
+  })
+
   it('normalizes a text message and calls processInboundMessage', async () => {
     await POST(
       req({

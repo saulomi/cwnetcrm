@@ -9,6 +9,7 @@
 // future payload correction is isolated to this file.
 // ============================================================
 
+import crypto from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { decrypt } from '@/lib/whatsapp/encryption'
@@ -104,7 +105,13 @@ export async function POST(request: Request) {
 
   const providedSecret = request.headers.get('x-uazapi-secret')
   const expectedSecret = uazapiChannel.webhook_secret ? decrypt(uazapiChannel.webhook_secret) : null
-  if (!expectedSecret || providedSecret !== expectedSecret) {
+  if (!expectedSecret || !providedSecret) {
+    return NextResponse.json({ error: 'Invalid webhook secret' }, { status: 401 })
+  }
+  const a = Buffer.from(providedSecret)
+  const b = Buffer.from(expectedSecret)
+  // Bail if lengths differ — timingSafeEqual throws otherwise.
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
     return NextResponse.json({ error: 'Invalid webhook secret' }, { status: 401 })
   }
 

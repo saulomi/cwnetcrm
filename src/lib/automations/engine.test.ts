@@ -105,6 +105,7 @@ vi.mock("./meta-send", () => ({
 }));
 
 import { runAutomationsForTrigger, triggerMatches } from "./engine";
+import { engineSendText } from "./meta-send";
 import type { Automation, KeywordMatchTriggerConfig } from "@/types";
 
 const ACCOUNT = "acct-1";
@@ -448,6 +449,76 @@ describe("tag_added — conversation policy", () => {
       status: "failed",
       error_message: "tag_added automation cannot send: contact has no existing conversation",
     }));
+  });
+});
+
+describe("send_message — channel override", () => {
+  beforeEach(() => {
+    vi.mocked(engineSendText).mockClear();
+  });
+
+  it("passes the step's channel_id through to engineSendText", async () => {
+    h.state.owned = { id: "c1" };
+    h.state.automations = [{
+      id: "a1",
+      account_id: ACCOUNT,
+      user_id: "u1",
+      name: "tag outreach",
+      trigger_type: "tag_added",
+      trigger_config: { tag_id: "tag-a" },
+      is_active: true,
+    }];
+    h.state.steps = [{
+      id: "s1",
+      automation_id: "a1",
+      step_type: "send_message",
+      position: 0,
+      parent_step_id: null,
+      step_config: { text: "Hello", channel_id: "ch-override" },
+    }];
+
+    await runAutomationsForTrigger({
+      accountId: ACCOUNT,
+      triggerType: "tag_added",
+      contactId: "c1",
+      context: { tag_id: "tag-a", conversation_id: "cv-1" },
+    });
+
+    expect(engineSendText).toHaveBeenCalledWith(
+      expect.objectContaining({ channelId: "ch-override" }),
+    );
+  });
+
+  it("passes undefined channelId when the step has no override (unchanged behavior)", async () => {
+    h.state.owned = { id: "c1" };
+    h.state.automations = [{
+      id: "a1",
+      account_id: ACCOUNT,
+      user_id: "u1",
+      name: "tag outreach",
+      trigger_type: "tag_added",
+      trigger_config: { tag_id: "tag-a" },
+      is_active: true,
+    }];
+    h.state.steps = [{
+      id: "s1",
+      automation_id: "a1",
+      step_type: "send_message",
+      position: 0,
+      parent_step_id: null,
+      step_config: { text: "Hello" },
+    }];
+
+    await runAutomationsForTrigger({
+      accountId: ACCOUNT,
+      triggerType: "tag_added",
+      contactId: "c1",
+      context: { tag_id: "tag-a", conversation_id: "cv-1" },
+    });
+
+    expect(engineSendText).toHaveBeenCalledWith(
+      expect.objectContaining({ channelId: undefined }),
+    );
   });
 });
 

@@ -543,6 +543,8 @@ export type AutomationTriggerConfig =
 
 export interface SendMessageStepConfig {
   text: string;
+  /** Explicit channel override. Unset = normal routing rule. */
+  channel_id?: string | null;
 }
 
 /**

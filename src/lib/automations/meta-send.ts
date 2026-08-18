@@ -43,6 +43,9 @@ interface SendTextArgs {
   conversationId: string
   contactId: string
   text: string
+  /** Explicit channel override — takes priority over the conversation's
+   *  pinned channel. Set from the send_message step's config. */
+  channelId?: string | null
 }
 
 interface SendTemplateArgs {
@@ -53,6 +56,9 @@ interface SendTemplateArgs {
   templateName: string
   language?: string
   params?: string[]
+  /** Explicit channel override — takes priority over the conversation's
+   *  pinned channel. Set from the send_message step's config. */
+  channelId?: string | null
 }
 
 export async function engineSendText(args: SendTextArgs): Promise<{ whatsapp_message_id: string }> {
@@ -151,7 +157,7 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
     resolvedChannel = await resolveChannelForSend(
       db,
       input.accountId,
-      conversation?.channel_id
+      input.channelId ?? conversation?.channel_id
     )
     provider = await resolveProvider(db, resolvedChannel)
   } catch (err) {

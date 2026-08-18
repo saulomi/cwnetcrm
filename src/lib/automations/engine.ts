@@ -371,6 +371,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         conversationId,
         contactId: args.contactId,
         text,
+        channelId: cfg.channel_id,
       })
       return `sent via Meta (${whatsapp_message_id})`
     }

@@ -183,11 +183,10 @@ function InboxPageInner() {
 
       if (!user) return;
 
-      // whatsapp_config is one-row-per-account post-multi-user, so
-      // the previous `.eq('user_id', user.id)` would miss the row
-      // for any teammate who didn't personally save the config —
-      // the "WhatsApp not connected" banner would show in the
-      // shared inbox even though the admin had it configured.
+      // Query the provider-agnostic channels table to check for any
+      // connected provider. Previously queried whatsapp_config which
+      // only reflected the Meta channel, so a UAZAPI-only account
+      // would always see this banner even while fully connected.
       // Resolve account_id via the profile and query by that.
       const { data: profile } = await supabase
         .from("profiles")
@@ -200,13 +199,16 @@ function InboxPageInner() {
         return;
       }
 
+      // Any provider counts — whatsapp_config only ever reflected the
+      // Meta channel, so a UAZAPI-only account always saw this banner
+      // even while fully connected (same bug class fixed in
+      // resolve-conversation.ts by Plan 4's Task 5).
       const { data } = await supabase
-        .from("whatsapp_config")
+        .from("channels")
         .select("status")
-        .eq("account_id", accountId)
-        .maybeSingle();
+        .eq("account_id", accountId);
 
-      setWhatsappConnected(data?.status === "connected");
+      setWhatsappConnected((data ?? []).some((c) => c.status === "connected"));
     };
 
     checkConnection();

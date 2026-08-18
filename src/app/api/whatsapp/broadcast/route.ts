@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
-import { sendTemplateMessage } from '@/lib/whatsapp/meta-api'
-import { decrypt } from '@/lib/whatsapp/encryption'
+import { resolveChannelForSend, resolveProvider, ChannelResolutionError } from '@/lib/whatsapp/channel-resolution'
 import type { SendTimeParams } from '@/lib/whatsapp/template-send-builder'
 import { resolveTemplateRow } from '@/lib/whatsapp/template-body'
 import {
@@ -89,6 +88,7 @@ export async function POST(request: Request) {
       template_name,
       template_language,
       template_params,
+      channel_id,
     } = body
 
     // Normalize to a list of {phone, params} regardless of shape.
@@ -120,23 +120,25 @@ export async function POST(request: Request) {
       )
     }
 
-    const { data: config, error: configError } = await supabase
-      .from('whatsapp_config')
-      .select('*')
-      .eq('account_id', accountId)
-      .single()
-
-    if (configError || !config) {
-      return NextResponse.json(
-        {
-          error:
-            'WhatsApp not configured. Please set up your WhatsApp integration first.',
-        },
-        { status: 400 }
-      )
+    let resolvedChannel
+    try {
+      resolvedChannel = await resolveChannelForSend(supabase, accountId, channel_id ?? null)
+    } catch (err) {
+      if (err instanceof ChannelResolutionError) {
+        return NextResponse.json({ error: err.message }, { status: err.code === 'ambiguous' ? 409 : 400 })
+      }
+      throw err
     }
 
-    const accessToken = decrypt(config.access_token)
+    let provider
+    try {
+      provider = await resolveProvider(supabase, resolvedChannel)
+    } catch (err) {
+      if (err instanceof ChannelResolutionError) {
+        return NextResponse.json({ error: err.message }, { status: 400 })
+      }
+      throw err
+    }
 
     // Load the template row once so sendTemplateMessage can build
     // header + button components on each iteration. Loading inside
@@ -185,9 +187,7 @@ export async function POST(request: Request) {
 
       for (const variant of variants) {
         try {
-          const result = await sendTemplateMessage({
-            phoneNumberId: config.phone_number_id,
-            accessToken,
+          const result = await provider.sendTemplate({
             to: variant,
             templateName: template_name,
             language: resolvedTemplate.language,

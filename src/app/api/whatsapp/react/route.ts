@@ -8,6 +8,7 @@ import {
   rateLimitResponse,
   RATE_LIMITS,
 } from '@/lib/rate-limit';
+import { resolveChannelForSend, ChannelResolutionError } from '@/lib/whatsapp/channel-resolution';
 
 /**
  * POST /api/whatsapp/react
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
 
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
-      .select('id, account_id, contact:contacts(phone)')
+      .select('id, account_id, channel_id, contact:contacts(phone)')
       .eq('id', targetMessage.conversation_id)
       .eq('account_id', accountId)
       .maybeSingle();
@@ -88,26 +89,49 @@ export async function POST(request: Request) {
       );
     }
 
-    // WhatsApp config + access token. Account-scoped post-multi-user.
-    const { data: config, error: configError } = await supabase
-      .from('whatsapp_config')
+    // Resolve the conversation's actual channel (its own channel_id, or
+    // the account default) rather than assuming the account's single
+    // legacy `whatsapp_config` row — required now that an account can
+    // have more than one channel.
+    let resolvedChannel;
+    try {
+      resolvedChannel = await resolveChannelForSend(supabase, accountId, conversation.channel_id ?? null);
+    } catch (err) {
+      if (err instanceof ChannelResolutionError) {
+        return NextResponse.json({ error: err.message }, { status: err.code === 'ambiguous' ? 409 : 400 });
+      }
+      throw err;
+    }
+
+    if (resolvedChannel.provider !== 'meta') {
+      // No sendReaction on WhatsAppProvider yet — reactions are
+      // Meta-only in this plan (the design spec is silent on UAZAPI
+      // reactions; adding one is a future, explicit decision).
+      return NextResponse.json(
+        { error: 'Reactions are only supported on Meta WhatsApp channels today.' },
+        { status: 400 },
+      );
+    }
+
+    const { data: metaChannel, error: metaChannelError } = await supabase
+      .from('meta_channels')
       .select('phone_number_id, access_token')
-      .eq('account_id', accountId)
+      .eq('channel_id', resolvedChannel.channelId)
       .single();
 
-    if (configError || !config) {
+    if (metaChannelError || !metaChannel) {
       return NextResponse.json(
         { error: 'WhatsApp not configured.' },
         { status: 400 },
       );
     }
 
-    const accessToken = decrypt(config.access_token);
+    const accessToken = decrypt(metaChannel.access_token);
     const sanitizedPhone = sanitizePhoneForMeta(contact.phone);
 
     try {
       await sendReactionMessage({
-        phoneNumberId: config.phone_number_id,
+        phoneNumberId: metaChannel.phone_number_id,
         accessToken,
         to: sanitizedPhone,
         targetMessageId: targetMessage.message_id,

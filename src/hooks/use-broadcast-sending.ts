@@ -50,6 +50,10 @@ interface BroadcastPayload {
    * falls back to the template's stored URL only when this is empty.
    */
   headerMediaUrl?: string;
+  /** Explicit channel to send through. undefined = account default. */
+  channelId?: string | null;
+  /** ms delay between individual sends (mainly for UAZAPI pacing). */
+  sendDelayMs?: number;
 }
 
 interface UseBroadcastSendingReturn {
@@ -377,6 +381,8 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
             customField: payload.audience.customField,
             excludeTagIds: payload.audience.excludeTagIds,
           },
+          channel_id: payload.channelId ?? null,
+          send_delay_ms: payload.sendDelayMs ?? null,
           status: 'sending',
           total_recipients: contacts.length,
           sent_count: 0,
@@ -503,6 +509,8 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
                 recipients: apiRecipients,
                 template_name: payload.template.name,
                 template_language: payload.template.language ?? 'en_US',
+                channel_id: payload.channelId ?? undefined,
+                send_delay_ms: payload.sendDelayMs ?? undefined,
               }),
             });
 

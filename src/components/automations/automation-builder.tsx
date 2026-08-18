@@ -62,6 +62,8 @@ import {
 } from "@/components/interactive/interactive-builder"
 import { interactivePayloadPreviewText } from "@/lib/whatsapp/interactive"
 import { createClient } from "@/lib/supabase/client"
+import { useChannels } from "@/hooks/use-channels"
+import { ChannelSelect } from "@/components/whatsapp/channel-select"
 import {
   childPath,
   insertAt,
@@ -1290,7 +1292,7 @@ function AddButton({ onPick }: { onPick: (t: AutomationStepType) => void }) {
 // Per-step config editor
 // ------------------------------------------------------------
 
-function StepEditor({
+export function StepEditor({
   step,
   onChange,
 }: {
@@ -1305,14 +1307,21 @@ function StepEditor({
   switch (step.step_type) {
     case "send_message":
       return (
-        <FieldBlock label={t("config.messageText")}>
-          <Textarea
-            value={(cfg.text as string) ?? ""}
-            onChange={(e) => set({ text: e.target.value })}
-            placeholder={t("config.placeholderMessageText")}
-            className="min-h-24 bg-muted text-foreground"
+        <>
+          <FieldBlock label={t("config.messageText")}>
+            <Textarea
+              value={(cfg.text as string) ?? ""}
+              onChange={(e) => set({ text: e.target.value })}
+              placeholder={t("config.placeholderMessageText")}
+              className="min-h-24 bg-muted text-foreground"
+            />
+          </FieldBlock>
+          <SendMessageChannelField
+            value={(cfg.channel_id as string | null) ?? null}
+            onChange={(v) => set({ channel_id: v })}
+            label={t("config.channelOverride")}
           />
-        </FieldBlock>
+        </>
       )
     case "send_buttons":
     case "send_list":
@@ -1511,6 +1520,24 @@ function StepEditor({
     default:
       return null
   }
+}
+
+function SendMessageChannelField({
+  value,
+  onChange,
+  label,
+}: {
+  value: string | null
+  onChange: (v: string | null) => void
+  label: string
+}) {
+  const { channels } = useChannels()
+  if (!channels || channels.length < 2) return null
+  return (
+    <FieldBlock label={label}>
+      <ChannelSelect channels={channels} value={value} onChange={onChange} allowDefault />
+    </FieldBlock>
+  )
 }
 
 function FieldBlock({

@@ -1076,6 +1076,7 @@
       "config": {
         "messageText": "메시지 텍스트",
         "placeholderMessageText": "안녕하세요! 문의해주셔서 감사합니다…",
+        "channelOverride": "발신 채널 (선택 사항)",
         "tagLabel": "태그",
         "modeLabel": "모드",
         "modes": {

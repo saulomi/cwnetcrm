@@ -1076,6 +1076,7 @@
       "config": {
         "messageText": "Texto da mensagem",
         "placeholderMessageText": "Olá! Obrigado por entrar em contato…",
+        "channelOverride": "Enviar por (opcional)",
         "tagLabel": "Etiqueta",
         "modeLabel": "Modo",
         "modes": {

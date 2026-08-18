@@ -1076,6 +1076,7 @@
       "config": {
         "messageText": "Message text",
         "placeholderMessageText": "Hi! Thanks for reaching out…",
+        "channelOverride": "Send via (optional)",
         "tagLabel": "Tag",
         "modeLabel": "Mode",
         "modes": {

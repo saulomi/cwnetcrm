@@ -199,7 +199,11 @@ export function Step4ScheduleSend({
               <Input
                 type="number"
                 min={0}
-                max={10000}
+                // Keep in sync with MAX_SEND_DELAY_MS in
+                // src/app/api/whatsapp/broadcast/route.ts — the server
+                // clamps to the same ceiling regardless, but the input
+                // shouldn't invite a value it's just going to silently cut.
+                max={4000}
                 step={100}
                 value={sendDelayMs ?? ''}
                 onChange={(e) =>

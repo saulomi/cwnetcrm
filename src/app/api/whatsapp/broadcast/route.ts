@@ -27,7 +27,15 @@ function sleep(ms: number): Promise<void> {
 // including recipients that already sent, which then get duplicate-
 // resent on retry. Cap it, and give the route explicit headroom to
 // match — same pattern as src/app/api/whatsapp/webhook/route.ts.
-export const MAX_SEND_DELAY_MS = 10_000
+//
+// The ceiling has to hold even at a full SEND_BATCH_SIZE batch
+// (use-broadcast-sending.ts, currently 10): worst case is
+// (SEND_BATCH_SIZE - 1) pacing gaps inside one request, on top of the
+// actual send calls themselves. At 10_000ms this alone could burn 90s
+// against a 60s maxDuration — the exact corruption this cap exists to
+// prevent. 4_000ms keeps 9 gaps under 40s, leaving real headroom for
+// the sends. If SEND_BATCH_SIZE grows, re-check this budget.
+export const MAX_SEND_DELAY_MS = 4_000
 export const maxDuration = 60
 
 interface BroadcastResult {

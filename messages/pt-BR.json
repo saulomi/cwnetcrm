@@ -882,7 +882,11 @@
         "progressDesc": "Processando {current} de {total} destinatários...",
         "toastFailedPreview": "Falha ao carregar dados de pré-visualização",
         "confirmTitle": "Confirmar transmissão",
-        "confirmDesc": "Você está prestes a enviar esta transmissão para <countTag>{count}</countTag> contatos usando o modelo <templateTag>{templateName}</templateTag>. Esta ação não pode ser desfeita."
+        "confirmDesc": "Você está prestes a enviar esta transmissão para <countTag>{count}</countTag> contatos usando o modelo <templateTag>{templateName}</templateTag>. Esta ação não pode ser desfeita.",
+        "channel": "Enviar de",
+        "uazapiWarning": "Este canal usa uma conexão não oficial do WhatsApp. Enviar muitas mensagens seguidas arrisca o número ser sinalizado. Considere adicionar um intervalo entre os envios.",
+        "delayLabel": "Intervalo entre envios",
+        "delayUnit": "ms"
       }
     }
   },

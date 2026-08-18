@@ -882,7 +882,11 @@
         "progressDesc": "Processing {current} of {total} recipients...",
         "toastFailedPreview": "Failed to load preview data",
         "confirmTitle": "Confirm Broadcast",
-        "confirmDesc": "You are about to send this broadcast to <countTag>{count}</countTag> contacts using the <templateTag>{templateName}</templateTag> template. This action cannot be undone."
+        "confirmDesc": "You are about to send this broadcast to <countTag>{count}</countTag> contacts using the <templateTag>{templateName}</templateTag> template. This action cannot be undone.",
+        "channel": "Send from",
+        "uazapiWarning": "This channel uses an unofficial WhatsApp connection. Sending many messages back-to-back risks the number getting flagged. Consider adding a delay between sends.",
+        "delayLabel": "Delay between sends",
+        "delayUnit": "ms"
       }
     }
   },

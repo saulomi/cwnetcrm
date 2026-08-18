@@ -882,7 +882,11 @@
         "progressDesc": "수신자 {total}명 중 {current}명 처리 중...",
         "toastFailedPreview": "미리보기 데이터를 불러오지 못했습니다",
         "confirmTitle": "브로드캐스트 확인",
-        "confirmDesc": "이 브로드캐스트를 <templateTag>{templateName}</templateTag> 템플릿을 사용해 <countTag>{count}</countTag>명의 연락처에 전송하려고 합니다. 이 작업은 되돌릴 수 없습니다."
+        "confirmDesc": "이 브로드캐스트를 <templateTag>{templateName}</templateTag> 템플릿을 사용해 <countTag>{count}</countTag>명의 연락처에 전송하려고 합니다. 이 작업은 되돌릴 수 없습니다.",
+        "channel": "발신 채널",
+        "uazapiWarning": "이 채널은 비공식 WhatsApp 연결을 사용합니다. 메시지를 연속으로 많이 보내면 번호가 차단될 위험이 있습니다. 발송 간 지연을 추가하는 것을 고려하세요.",
+        "delayLabel": "발송 간 지연",
+        "delayUnit": "ms"
       }
     }
   },

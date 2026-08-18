@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { MessageTemplate } from '@/types';
+import { useChannels } from '@/hooks/use-channels';
+import { ChannelSelect } from '@/components/whatsapp/channel-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -33,6 +35,10 @@ interface Step4Props {
   onBack: () => void;
   isProcessing: boolean;
   progress: number;
+  channelId: string | null;
+  onChannelIdChange: (id: string | null) => void;
+  sendDelayMs: number | null;
+  onSendDelayMsChange: (ms: number | null) => void;
 }
 
 export function Step4ScheduleSend({
@@ -45,11 +51,30 @@ export function Step4ScheduleSend({
   onBack,
   isProcessing,
   progress,
+  channelId,
+  onChannelIdChange,
+  sendDelayMs,
+  onSendDelayMsChange,
 }: Step4Props) {
   const t = useTranslations('Broadcasts.wizard');
   const [showConfirm, setShowConfirm] = useState(false);
   const [estimatedReach, setEstimatedReach] = useState<number>(0);
   const [loadingReach, setLoadingReach] = useState(true);
+
+  const { channels } = useChannels();
+  const connectedChannels = (channels ?? []).filter((c) => c.status === 'connected');
+  const selectedChannel = connectedChannels.find((c) => c.id === channelId) ?? null;
+  const isUazapi = selectedChannel?.provider === 'uazapi';
+
+  // Single connected channel: pre-select it, no picker friction (spec:
+  // "com 1 único canal conectado, é pré-selecionado sem fricção extra
+  // visível"). Runs once channels finish loading and nothing is
+  // selected yet — never overrides a user's explicit choice.
+  useEffect(() => {
+    if (!channelId && connectedChannels.length === 1) {
+      onChannelIdChange(connectedChannels[0].id);
+    }
+  }, [channelId, connectedChannels, onChannelIdChange]);
 
   useEffect(() => {
     async function calculateReach() {
@@ -142,6 +167,38 @@ export function Step4ScheduleSend({
             <p className="text-foreground">{template.language ?? 'en_US'}</p>
           </div>
         </div>
+
+        {connectedChannels.length > 1 && (
+          <div>
+            <p className="mb-1.5 text-xs text-muted-foreground">{t('scheduleSend.channel')}</p>
+            <ChannelSelect
+              channels={connectedChannels}
+              value={channelId}
+              onChange={onChannelIdChange}
+              className="w-full"
+            />
+          </div>
+        )}
+
+        {isUazapi && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-600 dark:text-amber-400">
+            <p>{t('scheduleSend.uazapiWarning')}</p>
+            <label className="mt-2 flex items-center gap-2">
+              {t('scheduleSend.delayLabel')}
+              <Input
+                type="number"
+                min={0}
+                step={100}
+                value={sendDelayMs ?? ''}
+                onChange={(e) =>
+                  onSendDelayMsChange(e.target.value === '' ? null : Number(e.target.value))
+                }
+                className="h-7 w-24 border-border bg-muted text-foreground"
+              />
+              {t('scheduleSend.delayUnit')}
+            </label>
+          </div>
+        )}
       </div>
 
       {/* Processing overlay */}

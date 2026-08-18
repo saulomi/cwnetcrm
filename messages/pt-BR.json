@@ -1238,6 +1238,7 @@
       "form": {
         "advancesTo": "Avança para",
         "textToCustomer": "Texto enviado ao cliente",
+        "channelOverride": "Enviar por (opcional)",
         "promptToCustomer": "Pergunta enviada ao cliente",
         "varKeyLabel": "Chave da variável (armazenada em flow_runs.vars; alfanumérico + sublinhado)",
         "varKeyPlaceholder": "ex.: nome, email, empresa",

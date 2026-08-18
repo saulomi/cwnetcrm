@@ -47,6 +47,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { uploadAccountMedia, MEDIA_MAX_BYTES } from "@/lib/storage/upload-media";
+import { useChannels } from "@/hooks/use-channels";
+import { ChannelSelect } from "@/components/whatsapp/channel-select";
 import { slugify, type BuilderNode } from "../shared";
 import { NextNodeRow, NodeKeySelect, TextRow } from "./fields";
 
@@ -84,6 +86,11 @@ export function NodeConfigForm({
             label={t("textToCustomer")}
             value={(cfg as { text?: string }).text ?? ""}
             onChange={(v) => onUpdateConfig({ text: v })}
+          />
+          <SendMessageChannelRow
+            value={(cfg as { channel_id?: string | null }).channel_id ?? null}
+            onChange={(v) => onUpdateConfig({ channel_id: v })}
+            label={t("channelOverride")}
           />
           <NextNodeRow
             value={(cfg as { next_node_key?: string }).next_node_key ?? ""}
@@ -212,6 +219,35 @@ export function NodeConfigForm({
         </p>
       );
   }
+}
+
+// ============================================================
+// send_message — optional channel override
+// ============================================================
+
+function SendMessageChannelRow({
+  value,
+  onChange,
+  label,
+}: {
+  value: string | null;
+  onChange: (v: string | null) => void;
+  label: string;
+}) {
+  const { channels } = useChannels();
+  if (!channels || channels.length < 2) return null; // nothing to override with
+  return (
+    <div>
+      <label className="mb-1 block text-xs text-muted-foreground">{label}</label>
+      <ChannelSelect
+        channels={channels}
+        value={value}
+        onChange={onChange}
+        allowDefault
+        className="bg-muted"
+      />
+    </div>
+  );
 }
 
 // ============================================================

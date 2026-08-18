@@ -1238,6 +1238,7 @@
       "form": {
         "advancesTo": "다음 진행",
         "textToCustomer": "고객에게 전송되는 텍스트",
+        "channelOverride": "발신 채널 (선택 사항)",
         "promptToCustomer": "고객에게 전송되는 질문",
         "varKeyLabel": "변수 키 (flow_runs.vars에 저장됨; 영숫자 + 밑줄만 사용)",
         "varKeyPlaceholder": "예: name, email, company",

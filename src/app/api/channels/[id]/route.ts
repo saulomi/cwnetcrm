@@ -1,10 +1,58 @@
 import { NextResponse } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import { disconnectUazapiInstance } from '@/lib/whatsapp/uazapi-api'
 
 interface RouteContext {
   params: Promise<{ id: string }>
+}
+
+/**
+ * Deleting the account's default channel leaves zero channels marked
+ * default. Once an account has 2+ channels, the next send falls
+ * through to resolveChannelForSend's "exactly one connected channel"
+ * fallback, which throws `ambiguous` (2+ connected) or
+ * `not_configured` (0 connected) instead of just picking one — so a
+ * replacement default must be promoted right away.
+ *
+ * Preference order: a connected channel first, else the oldest
+ * remaining channel (created_at ascending) as the tiebreak. Does
+ * nothing if no channels remain on the account.
+ *
+ * Fire-and-log, not fire-and-throw — the channel being removed is
+ * already gone from the database by the time this runs, so a failure
+ * here shouldn't fail the whole delete (same posture as
+ * setChannelStatus in channel-status.ts).
+ */
+async function promoteNewDefaultChannel(supabase: SupabaseClient, accountId: string): Promise<void> {
+  try {
+    const { data: candidates, error } = await supabase
+      .from('channels')
+      .select('id, status, created_at')
+      .eq('account_id', accountId)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      console.warn('[channels DELETE] failed to look up channels for default promotion:', error.message)
+      return
+    }
+    if (!candidates || candidates.length === 0) return
+
+    const winner =
+      candidates.find((c: { status: string }) => c.status === 'connected') ?? candidates[0]
+
+    const { error: updateError } = await supabase
+      .from('channels')
+      .update({ is_default: true, updated_at: new Date().toISOString() })
+      .eq('id', winner.id)
+
+    if (updateError) {
+      console.warn('[channels DELETE] failed to promote new default channel:', updateError.message)
+    }
+  } catch (err) {
+    console.warn('[channels DELETE] failed to promote new default channel:', err)
+  }
 }
 
 /**
@@ -71,7 +119,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
 
     const { data: channel, error: findError } = await supabase
       .from('channels')
-      .select('id, account_id, provider')
+      .select('id, account_id, provider, is_default')
       .eq('id', id)
       .single()
 
@@ -83,6 +131,9 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
       const { error } = await supabase.from('meta_channels').delete().eq('channel_id', id)
       if (error) {
         return NextResponse.json({ error: 'Failed to remove channel' }, { status: 500 })
+      }
+      if (channel.is_default) {
+        await promoteNewDefaultChannel(supabase, accountId)
       }
       return NextResponse.json({ success: true })
     }
@@ -109,6 +160,9 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     const { error } = await supabase.from('channels').delete().eq('id', id)
     if (error) {
       return NextResponse.json({ error: 'Failed to remove channel' }, { status: 500 })
+    }
+    if (channel.is_default) {
+      await promoteNewDefaultChannel(supabase, accountId)
     }
     return NextResponse.json({ success: true })
   } catch (error) {

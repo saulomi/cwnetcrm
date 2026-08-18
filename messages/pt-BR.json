@@ -1976,6 +1976,7 @@
   },
   "WhatsappChannels": {
     "selectChannel": "Selecionar um canal",
-    "accountDefault": "Padrão da conta"
+    "accountDefault": "Padrão da conta",
+    "switchFailed": "Falha ao trocar de canal"
   }
 }

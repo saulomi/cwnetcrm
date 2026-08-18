@@ -187,6 +187,7 @@ export function MessageThread({
   const t = useTranslations("Inbox.messageThread");
   const tTimer = useTranslations("Inbox.sessionTimer");
   const tQuote = useTranslations("Inbox.replyQuote");
+  const tChannels = useTranslations("WhatsappChannels");
   const dateFnsLocale = useDateFnsLocale();
 
   const { user } = useAuth();
@@ -894,7 +895,7 @@ export function MessageThread({
 
       if (error) {
         console.error("Failed to switch channel:", error);
-        toast.error("Failed to switch channel");
+        toast.error(tChannels("switchFailed"));
         return;
       }
 

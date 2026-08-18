@@ -1988,6 +1988,7 @@
   },
   "WhatsappChannels": {
     "selectChannel": "채널 선택",
-    "accountDefault": "계정 기본값"
+    "accountDefault": "계정 기본값",
+    "switchFailed": "채널 전환에 실패했습니다"
   }
 }

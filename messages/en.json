@@ -1988,6 +1988,7 @@
   },
   "WhatsappChannels": {
     "selectChannel": "Select a channel",
-    "accountDefault": "Account default"
+    "accountDefault": "Account default",
+    "switchFailed": "Failed to switch channel"
   }
 }

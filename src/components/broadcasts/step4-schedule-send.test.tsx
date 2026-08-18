@@ -185,6 +185,45 @@ describe('Step4ScheduleSend channel picker', () => {
     expect(onChannelIdChange).toHaveBeenCalledWith('ch-meta');
   });
 
+  it('resets sendDelayMs to null when switching away from a UAZAPI channel', () => {
+    vi.mocked(useChannels).mockReturnValue({
+      channels: TWO_CHANNELS,
+      loading: false,
+      reload: vi.fn(),
+    });
+
+    const onSendDelayMsChange = vi.fn();
+    const { rerender } = render(
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <Step4ScheduleSend
+          {...baseProps()}
+          channelId="ch-uazapi"
+          sendDelayMs={2000}
+          onSendDelayMsChange={onSendDelayMsChange}
+        />
+      </NextIntlClientProvider>,
+    );
+
+    expect(onSendDelayMsChange).not.toHaveBeenCalled();
+
+    // Switch to a Meta channel — the delay input disappears, but
+    // `sendDelayMs` is still 2000 in the parent's state until it reacts
+    // to the callback below (matching how the real parent page wires
+    // channelId/sendDelayMs as independent state).
+    rerender(
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <Step4ScheduleSend
+          {...baseProps()}
+          channelId="ch-meta"
+          sendDelayMs={2000}
+          onSendDelayMsChange={onSendDelayMsChange}
+        />
+      </NextIntlClientProvider>,
+    );
+
+    expect(onSendDelayMsChange).toHaveBeenCalledWith(null);
+  });
+
   it('does not render the picker when there is only one connected channel', () => {
     vi.mocked(useChannels).mockReturnValue({
       channels: ONE_CHANNEL,

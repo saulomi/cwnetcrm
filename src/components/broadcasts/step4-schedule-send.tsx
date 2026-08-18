@@ -76,6 +76,17 @@ export function Step4ScheduleSend({
     }
   }, [channelId, connectedChannels, onChannelIdChange]);
 
+  // The delay input only renders for a UAZAPI channel, but `sendDelayMs`
+  // lives in the parent's state — switching to a non-UAZAPI channel
+  // hides the input without clearing the value underneath it, so a
+  // stale delay would still be sent to the server on submit. Clear it
+  // the moment the selected channel is no longer UAZAPI.
+  useEffect(() => {
+    if (!isUazapi && sendDelayMs !== null) {
+      onSendDelayMsChange(null);
+    }
+  }, [isUazapi, sendDelayMs, onSendDelayMsChange]);
+
   useEffect(() => {
     async function calculateReach() {
       setLoadingReach(true);
@@ -188,6 +199,7 @@ export function Step4ScheduleSend({
               <Input
                 type="number"
                 min={0}
+                max={10000}
                 step={100}
                 value={sendDelayMs ?? ''}
                 onChange={(e) =>

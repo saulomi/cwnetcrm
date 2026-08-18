@@ -56,4 +56,59 @@ describe('POST /api/whatsapp/broadcast', () => {
     )
     expect(res.body).toMatchObject({ sent: 1, failed: 0 })
   })
+
+  it('sleeps send_delay_ms between recipients when provided', async () => {
+    vi.useFakeTimers()
+    sendTemplate.mockClear()
+
+    let resolved = false
+    const promise = POST(
+      req({
+        recipients: [
+          { phone: '+15551230000', params: [] },
+          { phone: '+15551230001', params: [] },
+        ],
+        template_name: 'promo',
+        send_delay_ms: 300,
+      })
+    ).then((res) => {
+      resolved = true
+      return res
+    })
+
+    // Let the first send's microtasks flush without advancing any timer.
+    await vi.advanceTimersByTimeAsync(0)
+    expect(sendTemplate).toHaveBeenCalledTimes(1)
+    expect(resolved).toBe(false)
+
+    // Advancing by the pacing delay lets the second (and, since it's the
+    // last recipient, final) send fire and the response resolve.
+    await vi.advanceTimersByTimeAsync(300)
+    const res = (await promise) as unknown as { body: { sent: number; failed: number } }
+
+    expect(resolved).toBe(true)
+    expect(sendTemplate).toHaveBeenCalledTimes(2)
+    expect(res.body).toMatchObject({ sent: 2, failed: 0 })
+
+    vi.useRealTimers()
+  })
+
+  it('does not delay when send_delay_ms is omitted (existing behavior unchanged)', async () => {
+    sendTemplate.mockClear()
+
+    // No fake timers here at all — if the route waited on anything, this
+    // would hang until the test's own timeout instead of resolving.
+    const res = (await POST(
+      req({
+        recipients: [
+          { phone: '+15551230000', params: [] },
+          { phone: '+15551230001', params: [] },
+        ],
+        template_name: 'promo',
+      })
+    )) as unknown as { body: { sent: number; failed: number } }
+
+    expect(sendTemplate).toHaveBeenCalledTimes(2)
+    expect(res.body).toMatchObject({ sent: 2, failed: 0 })
+  })
 })

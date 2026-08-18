@@ -15,6 +15,10 @@ import {
   RATE_LIMITS,
 } from '@/lib/rate-limit'
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 interface BroadcastResult {
   phone: string
   status: 'sent' | 'failed'
@@ -89,6 +93,7 @@ export async function POST(request: Request) {
       template_language,
       template_params,
       channel_id,
+      send_delay_ms,
     } = body
 
     // Normalize to a list of {phone, params} regardless of shape.
@@ -166,7 +171,8 @@ export async function POST(request: Request) {
     let sentCount = 0
     let failedCount = 0
 
-    for (const recipient of recipients) {
+    for (let i = 0; i < recipients.length; i++) {
+      const recipient = recipients[i]
       const sanitized = sanitizePhoneForMeta(recipient.phone)
 
       if (!isValidE164(sanitized)) {
@@ -228,6 +234,15 @@ export async function POST(request: Request) {
           error: lastError || 'Unknown error',
         })
         failedCount++
+      }
+
+      // Pace sends, but never pay the delay after the LAST recipient —
+      // nothing downstream is waiting on that gap, so it would be a pure
+      // waste (and, in tests that drive completion via fake timers, a
+      // pending timer with nothing left to advance it).
+      const isLast = i === recipients.length - 1
+      if (!isLast && typeof send_delay_ms === 'number' && send_delay_ms > 0) {
+        await sleep(send_delay_ms)
       }
     }
 

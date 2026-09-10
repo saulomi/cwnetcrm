@@ -19,6 +19,14 @@ export const metadata: Metadata = {
   },
 };
 
+// The auth pages (login / signup / forgot-password) are client components
+// that build a Supabase browser client in their render body. Prerendering
+// them at build time evaluates that call with no NEXT_PUBLIC_SUPABASE_* in
+// the environment and throws ("Your project's URL and API key are
+// required"). These are interactive forms with no SEO value (noindex
+// above), so opt the whole group out of static generation.
+export const dynamic = "force-dynamic";
+
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return children;
 }
